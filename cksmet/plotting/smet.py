@@ -5,9 +5,15 @@ import pandas as pd
 import cksphys.io
 import cksmet.io
 import cksmet.cuts
+from collections import Iterable
+from matplotlib.ticker import FuncFormatter, MaxNLocator
 
 sns.set_style('whitegrid')
 sns.set_color_codes()
+
+texrp = '\mathregular{R}_\mathregular{P}' 
+texre = '\mathregular{R}_\mathregular{E}' 
+
 
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
 
@@ -18,7 +24,7 @@ def prad_fe_label():
     xticks(rpticks,rpticks)
 
 def prad_fe_errbar():
-    cks = cksmet.io.load_table('cks')
+    cks = cksmet.io.load_table('cks-cuts')
     ebarx = 14
     ebary = -0.7
     xferr = (cks.iso_prad_err1 / cks.iso_prad).median()    
@@ -123,7 +129,6 @@ def period_fe():
     plot(cut.koi_period, cut.cks_smet,'.r')
     #prad_fe_label()
 
-from collections import Iterable
 
 def prad_fe_fit():
     cksbin = cksmet.io.load_table('cksbin-fe')
@@ -411,88 +416,83 @@ def mass_enhancement(binkey='pl_rade', bins=[1,2,3,4,8]):
     ylim(0.1,10)
     xlim(-0.5,0.5)
 
-
 def prad_hist_stacked(prad_bins=[0.5,1.0,2.0,4.0,8.0,16]):
-    lamo = cksmet.io.load_table('lamost-dr2',cache=1)
+    lamo = cksmet.io.load_table('lamost-dr2-cuts',cache=1)
+    cks = cksmet.io.load_table('cks-cuts',cache=1)
 
-    smet_bins = arange(-0.8,0.61,0.1)
-    nrows = len(prad_bins) -1 
-    ncols = 8
-    width = 2.5 * ncols
-    height = 2.5 * nrows
+    lamo = lamo.query('isany==False')
+    cks = cks.query('isany==False')
+
+    smet_bins = arange(-0.8,0.81,0.1)
+    nrows = len(prad_bins) - 1 
+    ncols = 2
+    width = 7.5
+    height = 9
     fig, axL = subplots(
-        nrows=nrows,ncols=ncols,figsize=(width,height),sharex=True,sharey=True
+        nrows=nrows,ncols=ncols,figsize=(width,height),sharex=True
     )
 
-    def histstack(df, axL):
-        for i in range(nrows):
-            sca(axL[nrows-1-i])
-            prad1 = prad_bins[i]
-            prad2 = prad_bins[i+1]
-            cut = df[df.iso_prad.between(prad1,prad2)]
-            hist(lamo.lamo_smet, bins=smet_bins, normed=True,histtype='step',lw=2)
-            hist(cut.cks_smet, bins=smet_bins, normed=True,histtype='step',lw=2)
-    
     # Lamost taps out at kepmag = 14, so let's restrict
     i = 0 
     cut = cks
-    histstack(cut,axL[:,i])
-    sca(axL[0,i])
-    title('Full ({})'.format(len(cut)))
+    for i in range(nrows):
+        histogramkw = dict(bins=smet_bins,)
+        histkw = dict(histtype='step',lw=2, bins=smet_bins)
+        prad1 = prad_bins[i]
+        prad2 = prad_bins[i+1]
+        irow = nrows-1-i
+        
+        axhist = axL[irow,0]
+        axcum = axL[irow,-1]
 
-    for j in range(nrows):
-        sca(axL[nrows-1-j,i])
-        prad1 = prad_bins[j]
-        prad2 = prad_bins[j+1]
-        ylabel('$R_p$ = {:.1f} {:.1f}'.format(prad1,prad2))
-    axL[-1,0].set_xlabel('[Fe/H]')
+        sca(axhist)
 
-    i+=1
+        cut = cks[cks.iso_prad.between(prad1,prad2)]
 
-    cut = cks[cks['isfaint'.split()].sum(axis=1)==0]
-    histstack(cut,axL[:,i])
-    sca(axL[0,i])
-    title('Kp < 14.2 ({})'.format(len(cut))) 
-    i+=1
+        # LAMOST HIST
+        counts,_ = histogram(lamo.lamo_smet,**histogramkw)
+        total = len(lamo)
+        weights = 1.0*counts / total
+        hist(smet_bins[:-1], weights=weights, color='Gray',**histkw)
 
-    cut = cks[cks['isfaint isneafp isfp'.split()].sum(axis=1)==0]
-    histstack(cut,axL[:,i])
-    sca(axL[0,i])
-    title('Not FP ({})'.format(len(cut)))
-    i+=1
+        # CKS HIST
+        counts,_ = histogram(cut.cks_smet,**histogramkw)
+        total = len(cut)
+        weights = 1.0*counts / total
+        hist(smet_bins[:-1], weights=weights, color='b',**histkw)
 
-    cut = cks[cks['isfaint isneafp isfp isbadprad'.split()].sum(axis=1)==0]
-    histstack(cut,axL[:,i])
-    sca(axL[0,i])
-    title(r'$\sigma(R_p) / R_p$ < 0.12% ({})'.format(len(cut))) 
-    i+=1
+        sca(axcum)
+        histkw = dict(
+            bins=smet_bins, normed=True,cumulative=True,histtype='step',lw=2,zorder=10
+        )
+        hist(lamo.lamo_smet, color='Gray', **histkw)
+        hist(cut.cks_smet, color='b', **histkw)
 
-    cut = cks[cks['isfaint isneafp isfp isbadprad isdiluted'.split()].sum(axis=1)==0]
-    histstack(cut,axL[:,i])
-    sca(axL[0,i])
-    title('rcorr < 0.05 ({})'.format(len(cut))) 
-    i+=1
+        sca(axhist)
+        x1 = 0.02
+        y1 = 0.98
+        y2 = 0.72
+        textkw = dict(transform=axhist.transAxes, fontsize='medium',va='top')
+        text(x1, y1,'CKS\n${}$ = {}$-${} ${}$'.format(texrp,prad1,prad2,texre),color='b',**textkw)
+        text(x1, y2,'LAMOST',color='Gray',**textkw)
 
-    cut = cks[cks['isfaint isneafp isfp isbadprad isdiluted isgrazing'.split()].sum(axis=1)==0]
-    histstack(cut,axL[:,i])
-    sca(axL[0,i])
-    title('b < 0.7 ({})'.format(len(cut))) 
-    i+=1
+        sca(axcum)
+        textkw['transform'] = axcum.transAxes
+        text(x1, y1,'CKS\n${}$ = {}$-${} ${}$'.format(texrp,prad1,prad2,texre),color='b',**textkw)
+        text(x1, y2,'LAMOST',color='Gray',**textkw)
 
-    cut = cks[cks['isfaint isneafp isfp isbadprad isdiluted isgrazing islongper'.split()].sum(axis=1)==0]
-    histstack(cut,axL[:,i])
-    sca(axL[0,i])
-    title('per < 300d ({})'.format(len(cut))) 
-    i+=1
 
-    cut = cks[cks['isfaint isneafp isfp isbadprad isdiluted isgrazing islongper issubgiant'.split()].sum(axis=1)==0]
-    histstack(cut,axL[:,i])
-    sca(axL[0,i])
-    title('logg > 3.9 ({})'.format(len(cut))) 
-    i+=1
-    fig.set_tight_layout(True)
+    setp(axL[:,0],xlim=(-1.0,0.6),ylim=(0,0.3))
+    setp(axL[:,1],xlim=(-1.0,0.6),ylim=(0,1.0))
+    setp(axL[-1,:],xlabel='[Fe/H]')
 
-from matplotlib.ticker import FuncFormatter, MaxNLocator
+    sca(axL[2,0])
+    ylabel('Fraction of Candidates per Bin',ha='center')
+
+    sca(axL[2,1])
+    ylabel('Cumulative Fraction of Candidates',ha='center')
+
+    fig.subplots_adjust(wspace=0.3,top=0.99,bottom=0.07,left=0.1,right=0.9)
 
 def prad_hist_stacked_small(prad_bins=[0.5,1.0,2.0,4.0,8.0,16]):
     lamo = cksmet.io.load_table('lamost-dr2',cache=1)
@@ -504,7 +504,7 @@ def prad_hist_stacked_small(prad_bins=[0.5,1.0,2.0,4.0,8.0,16]):
 
     smet_bins = arange(-0.8,0.61,0.1)
     nrows = len(prad_bins) -1 
-    ncols = 3
+    ncols = 2
     width = 2 * ncols
     height = 2 * nrows
     fig, axL = subplots(
@@ -579,10 +579,9 @@ def cuts():
     for cuttype in cuttypes:
         sca(axL[iplot])
         key = 'is'+cuttype
-
         cut = cksmet.cuts.get_cut(cuttype)
-        df[key] = cut(df)
 
+        df[key] = cut(df)
         bpass += df[key].astype(int)
         plotkw = dict(ms=4)
         plot(df.iso_prad, df.cks_smet,'.',color='LightGray',**plotkw)
