@@ -3,6 +3,13 @@ from astropy import units as u
 from astropy import constants as c
 import pandas as pd
 import xarray as xr
+from scipy.interpolate import RegularGridInterpolator
+
+TDUR_EARTH_SUN_HRS = (
+    ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
+
+DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
+
 per_bins_dict = {
     'xfine': [
         1.  ,    1.19,    1.41,    1.68,    2.  ,    2.38,    2.83,
@@ -54,23 +61,38 @@ smet_bins_dict = {
     'fine': np.arange(-0.8,0.6001,0.2)
 }
 
-
 def _sbins_to_sbins_id(sbins):
     """Convenience function for converting bin names to bins_id names"""
     return ['{}_bin_id'.format(sbin) for sbin in sbins]
 
 class Occurrence():
+    """
+    Occurrence Object
+
+    This object allows one to compute planet occurrence in bins of
+    orbital period, planet radius, and stellar metallicity
+
+    Args:
+        df (pandas.DataFrame): sample of planets. must contain the following 
+            rows:
+            - iso_sma (semi-major axis)
+            - iso_srad (stellar radius)
+            - iso_srad (stellar radius)
+            - must also contain quantities associated with the bins. e.g. if 
+              we're binning in `period`, must contian `period`
+    """
+
     def __init__(self, plnt):
-        """
-        Initialize new occurrence object.
-
-        Args:
-            df (DataFrame): list of planets
-        """
-
         self.plnt = plnt
 
     def add_prob_transit(self, b_transit):
+        """Compute transit probability
+        
+        Args:
+            b_transit (float): if we require b < 0.7 then the transit 
+                probability is a / Rstar / b_transit
+        """
+
         plnt = self.plnt
         self.b_transit = b_transit
         a = np.array(plnt['iso_sma']) * u.AU
@@ -80,6 +102,16 @@ class Occurrence():
         self.plnt = plnt
 
     def add_bins(self, bins_dict, spacing_dict):
+        """Lay down grid for computing occurrence
+        
+        Args:
+            bins_dict (dict): Dictionary of lists defining bins. e.g.:
+                {'period': [5,10,20], 'prad': [1,2,4], 'smet': [-0.4,0.0,0.4]}
+            spacing_dict (dict): Specify linear or log spacing e.g.:
+                {'period': 'log', 'prad': 'log', 'smet': 'linear'}
+        
+        """
+
         assert bins_dict.keys()==spacing_dict.keys()
         self.bins = bins_dict
         self.spacing = spacing_dict
@@ -95,6 +127,7 @@ class Occurrence():
             self._label_bins(key)
             
     def _add_bin_edges(self, key):
+        """Computes bin edges and centers for the specified bins"""
         bins = self.bins[key]
         spacing = self.spacing[key]
 
@@ -156,12 +189,19 @@ class Occurrence():
         self.plnt = plnt
 
     def count_planets_in_bins(self, sbins):
-        """# How many stars could we have detected the planets around?
+        """Count planets in bins
 
         For a planet at the center of the bin what fraction of the
         stars in the sample, could we detect?
 
         Args:
+            sbins (list): list of strings specifying the bins to compute 
+                occurrence over
+
+        Returns:
+            xarray: data with the following quantities computed in each bin
+                - plnt_transit_sum: number of transiting planets
+                - plnt_total_sum: number planets (including non-transiting)
         """
         labels = [pd.cut(self.plnt[sbin],self.bins[sbin]) for sbin in sbins]
         g = self.plnt.groupby(labels)
@@ -171,17 +211,7 @@ class Occurrence():
         out = out.to_xarray()
         for sbin in sbins :
             out.coords[sbin] = self.binsc[sbin]
-
-
         return out 
-
-TDUR_EARTH_SUN_HRS = (
-    ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
-
-DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
-
-from scipy import interpolate
-
 
 class Stars(object):
     """
@@ -206,13 +236,22 @@ class Stars(object):
 
         """
         self.stars = stars
-        
-        self.logcdpp_x = np.log10([3,6,12])
-        self.logcdpp_y = np.array(stars['logcdpp3 logcdpp6 logcdpp12'.split()])
-        self.logcdpp_interp = interpolate.interp1d(
-            self.logcdpp_x, self.logcdpp_y, kind='linear',
-            fill_value='extrapolate', assume_sorted=True
-        )
+
+        # Define the regular grid for interpolation
+        x0 = np.array(stars.index) # (nstar)
+        x1 = np.log10([3,6,12]) # (3)
+        points  = (x0, x1) 
+        cols = 'logcdpp3 logcdpp6 logcdpp12'.split()
+        values = stars[cols] # (nstar, 3)
+        values = np.array(values)
+        logcdpp_interp = RegularGridInterpolator(
+            points, values, bounds_error=False, fill_value=None
+        )        
+
+        self.logcdpp_interp = logcdpp_interp
+        self.x0 = x0 
+        self.x1 = x1
+        self.values = values
 
     def count_stars_in_bins(s):
         """
@@ -246,12 +285,19 @@ class Stars(object):
         tdur = self._tdur(period)
         cdpp = self._cdpp(tdur) * 1e-6
         num_transits = self._num_transits(period)
-#a        print "{} {} {}".format(depth.ix[6521045],cdpp.ix[6521045],num_transits.ix[6521045])
         _mes = depth / cdpp * np.sqrt(num_transits)
         return _mes
 
     def _tdur(self, period):
-        """Calculate a transit duration for each star"""
+        """
+        Compute duration for a putative transit of a given orbital period
+        
+        Args:
+            period (float): orbital period
+
+        Returns:
+            pandas.Series: transit duration for each star in the sample.
+        """
         period_yrs = period / 365.25
         tdur = ( 
             TDUR_EARTH_SUN_HRS * self.stars['srad'] * 
@@ -260,29 +306,52 @@ class Stars(object):
         return tdur
 
     def _depth(self, prad):
+        """
+        Compute transit depth for a putative planet of a given size.
+        
+        Args: 
+            prad (float): planet radius (Earth-radii) 
+
+        Returns:
+            pd.Series: the depth of a `prad` planet around each star
+
+        """
         _depth = (prad / self.stars.srad)**2 * DEPTH_EARTH_SUN
         return _depth
 
     def _num_transits(self, period):
         """
-        Calculate number of transits over Kepler observing window for a
-        given orbital period
+        Compute number of transits for a planet having a given orbital
+        period, factoring in duty cycle.
+
+        Args:
+            period (float): orbital period (days)
+          
+        Returns:
+            pd.Series: the number of transits for each star in the sample
         """
+
+
         return self.stars.tobs / period
 
     def _cdpp(self, tdur):
         """
-        Calculate cdpp of a given duration
+        Calculate noise (CDPP) over a specified duration
+        
+        Args:
+            tdur (pandas.Series or array): the transit duration for each star
+
+        Retruns:
+            pd.Series: The CDPP for each star
+
         """
-        import pdb;pdb.set_trace()
         tdur = np.array(tdur)
         logtdur = np.log10(tdur)
-        logcdpp = self.logcdpp_interp(logtdur)
+
+        x0i = self.x0
+        x1i = logtdur
+        pointsi = np.vstack([x0i,x1i]).T
+        logcdpp = self.logcdpp_interp(pointsi)
         cdpp = pd.Series(index=self.stars.index,data=10**logcdpp)
         return cdpp
 
-
-class CDPP(object):
-     def __init__(self):
-       df = pd.read_hdf('data/kic.hdf')
-       
