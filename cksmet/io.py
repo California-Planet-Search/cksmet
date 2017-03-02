@@ -6,10 +6,11 @@ from collections import Iterable
 FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
 import os
 import cksphys.io
-
+from astropy.table import Table
 from astropy.io import fits 
 from cpsutils.pdplus import LittleEndian
 import cksmet.cuts
+from scipy.io import idl
 
 def load_table(table, verbose=False, cache=False):
     """Load tables used in cksphys
@@ -39,10 +40,12 @@ def load_table(table, verbose=False, cache=False):
         df.to_hdf(hdffn,table)
         return df
 
-
+    '''
     elif table=='nea':
         df = pd.read_csv('data/nea_2017-01-28.csv',comment='#')
-
+    '''
+    if table=='nea':
+        df = cksphys.io.load_table('nea')
 
     elif table=='hadden-ttv':
         tablefn = 'data/hadden17/masstable.tex'
@@ -74,7 +77,6 @@ def load_table(table, verbose=False, cache=False):
         tablefn = 'data/hadden17/rvtable.tex'
         with open(tablefn) as f:
             lines = f.readlines()
-
 
         df = []
         for row in lines:
@@ -131,7 +133,6 @@ def load_table(table, verbose=False, cache=False):
     elif table=='hadden+cks+nea':
         df = load_table('hadden+cks')
         nea = load_table('nea')
-
         df.index = df.pl_name
         nea.index = nea.pl_name
         df['st_metfe'] = df['cks_smet']
@@ -139,7 +140,6 @@ def load_table(table, verbose=False, cache=False):
         df['st_metfe'] = df.st_metfe.fillna(value=nea.st_metfe)
         df['st_teff'] = df.st_metfe.fillna(value=nea.st_teff)
         df['pl_name st_teff st_metfe'.split()]
-
         return df
 
     elif table=='cksbin-fe':
@@ -181,10 +181,14 @@ def load_table(table, verbose=False, cache=False):
         df['smet_err1'] = df['feh_err']
         df['smet_err2'] = -1.0 * df['feh_err']
         df = add_prefix(df,'lamo_')
+
+        stellar = cksphys.io.load_table('stellar17',cache=True)
+        df = pd.merge(df,stellar)
         return df
 
     elif table=='cks':
         df = pd.read_csv('../CKS-Physical/data/cks_physical_merged.csv')
+
     elif table=='lamost-dr2+cks':
         cks = load_table('cks')
         lamost = load_table('lamost-dr2',cache=1)
@@ -196,12 +200,181 @@ def load_table(table, verbose=False, cache=False):
             'cks+nea+iso-floor+huber-phot+furlan',cache=1,
             cachefn='../CKS-Physical/load_table_cache.hdf'
         )
-        cuttypes = 'none faint diluted grazing longper badprad'.split()
+        cuttypes = 'none notdwarf faint diluted grazing longper badprad'.split()
         df = cksmet.cuts.add_cuts(df,cuttypes)
         
+    elif table=='lamost-dr2-cuts':
+        # Apply similar set of cuts to the lamost sample.
+        df = load_table('lamost-dr2',cache=1)
+        cuttypes = 'none faint lamonotdwarf'.split()
+
+        df = cksmet.cuts.add_cuts(df,cuttypes)
+
+    elif table=='buch14':
+        df = pd.read_table(
+            'data/buchhave_2014_nature_table-s1.txt',sep='\s*',
+            names=[
+                'id_koicand','steff','steff_err','slogg','slogg_err','smet',
+                'smet_err','smass','smass_err1','smass_err2','srad',
+                'srad_err1','srad_err2','prad','prad_err'
+            ],
+            comment='#'
+        )
+        df = add_prefix(df,'spc_')
+    elif table=='buch14-stars':
+        df = load_table('buch14')
+        df['id_koi'] = df.id_koicand.str.slice(start=1,stop=6).astype(int)
+        df = df.drop(['id_koicand','spc_prad','spc_prad_err'],axis=1)
+        df = df.drop_duplicates()
+    elif table=='buch14-stars+cks':
+        df = load_table('buch14')
+        cks = load_table('cks')
+        df = pd.merge(df,cks)
+    elif table=='kic':
+        df = pd.read_hdf('data/kic.hdf','kic')
+        namemap = {'KICID':'id_kic','TEFF':'steff','LOGG':'slogg','FEH':'smet'}
+        df = df.rename(columns=namemap)[namemap.values()]
+        df = add_prefix(df,'kic_')
+
+    elif table=='kic+cks':
+        df = load_table('kic')
+        cks = load_table('cks')
+        df = pd.merge(df, cks)
+    elif table=='huber14':
+        t = Table.read(
+            'data/huber14/table5.dat',
+            readme='data/huber14/ReadMe',
+            format='ascii.cds'
+        )
+        namemap = {
+            'KIC':'id_kic','Teff1':'steff','e_Teff1':'steff_err1',
+            'log.g1':'slogg','e_log.g1':'slogg_err',
+            '[Fe/H]1':'smet','e_[Fe/H]1':'smet_err',
+            'R':'srad','e_R':'srad_err','M':'smass','e_M':'smass_err'
+        }
+        df = t.to_pandas()
+        df = df.rename(columns=namemap)[namemap.values()]
+        df['id_kic'] = df.id_kic.astype(int)
+        df = add_prefix(df,'huber_')
+
+    elif table=='huber14+cks':
+        df = load_table('huber14',cache=1)
+        cks = load_table('cks')
+        df = pd.merge(df,cks)
+
+    elif table=="huber14+cdpp":
+        df = pd.read_hdf('data/kic.hdf')
+        df = df.rename(columns={
+            'KEPMAG':'kepmag','KICID':'id_kic','CDPP3':'cdpp3','CDPP6':'cdpp6',
+            'CDPP12':'cdpp12'}
+        )
+        df = df['id_kic kepmag cdpp3 cdpp6 cdpp12'.split()]
+        cdpp = np.vstack(df.ix[:,'cdpp3'])
+        for col in 'cdpp3 cdpp6 cdpp12'.split():
+            cdpp = np.vstack(df.ix[:,col])
+            cdpp[cdpp==0.0] = np.nan
+            cdpp = np.nanmedian(cdpp,axis=1)
+            df[col] = cdpp
+            df['log'+col] = np.log10(cdpp)
+
+        huber14 = load_table('huber14')
+        stellar17 = cksphys.io.load_table('stellar17')
+        df = pd.merge(df,huber14)
+        df = pd.merge(df,stellar17)
+        
+        # add place holder column for quarter zero
+        df['st_quarters'] = '0'+df.st_quarters 
+        df['tobs'] = 0
+        for q in range(18):
+            # Was quarter observed
+            qobs = df.st_quarters.str.slice(start=q,stop=q+1).astype(int)
+            if q==17:
+                qobs=0
+            df['tobs'] += qobs * long_cadence_day * lc_per_quarter[q]
+
+        return df
+
+    elif table=='bruntt12':
+        t = Table.read('data/bruntt12/table3.dat',readme='data/bruntt12/ReadMe',format='ascii.cds')
+        namemap={'KIC':'id_kic','Teff':'steff','logg':'slogg','[Fe/H]':'smet'}
+        df = t.to_pandas().rename(columns=namemap)[namemap.values()]
+
+        df['id_kic'] = df['id_kic'].astype(int)
+        df = add_prefix(df,'bruntt_')
+    elif table=='bruntt12+cks':
+        df = load_table('bruntt12')
+        cks = load_table('cks')
+        df = pd.merge(df,cks)
+    elif table=='everett13':
+        t = Table.read(
+            'data/everett13/table2.dat',
+            readme='data/everett13/ReadMe',
+            format='ascii.cds'
+            )
+        namemap={'KIC':'id_kic','Teff':'steff','log(g)':'slogg','[Fe/H]':'smet'}
+        df = t.to_pandas().rename(columns=namemap)[namemap.values()]
+        df['id_kic'] = df['id_kic'].astype(int)
+        df = add_prefix(df,'everett_')
+    elif table=='everett13+cks':
+        df = load_table('everett13')
+        cks = load_table('cks')
+        df = pd.merge(df,cks)
+
+    elif table=='endl16':
+        df = pd.read_csv('data/endl16_table2.txt',sep='\s') 
+        namemap = {'KOI':'id_koi','Teff':'steff','logg':'slogg','FeH':'smet'}
+        df = df.rename(columns=namemap)[namemap.values()]
+        df = add_prefix(df,'endl_')
+        df = df.convert_objects(convert_numeric=True)
+    elif table=='endl16+cks':
+        df = load_table('endl16')
+        cks = load_table('cks')
+        df = pd.merge(df,cks)
+
+    elif table=='sm':
+        df = pd.read_csv('data/specmatch_results.csv')
+        df = df.groupby('name',as_index=False).last()
+        df = df[df.name.str.contains('KIC|CK\d{5}|K\d{5}')]
+        df['id_koi'] = None
+        df['id_kic'] = None
+        idx = df[df.name.str.contains('^K\d{5}$')].index
+
+        df.ix[idx,'id_koi'] = df.ix[idx].name.str.slice(start=1).astype(int)
+
+        idx = df[df.name.str.contains('^CK\d{5}$')].index
+        df.ix[idx,'id_koi'] = df.ix[idx].name.str.slice(start=2).astype(int)
+
+        idx = df[df.name.str.contains('^KIC')].index
+        df.ix[idx,'id_kic'] = df.ix[idx].name.str.slice(start=3).astype(int)
+
+        namemap = {'name':'id_name','id_kic':'id_kic','id_koi':'id_koi','teff':'steff','logg':'slogg','fe':'smet'}
+        df = df.rename(columns=namemap)[namemap.values()]
+        df = add_prefix(df,'sm_')
+        df.index = df.id_name
+        df = df.drop(['KIC3427720']) # Dropping because binary
+        binaries = 'KIC9025370 KIC12317678'.split()
+        df = df.drop(binaries)
+
+    elif table=='sm+bruntt12':
+        br = load_table('bruntt12')
+        sm = load_table('sm')
+        sm = sm.dropna(subset=['id_kic'])
+        sm['id_kic'] = sm.id_kic.astype(int)
+        br = br.dropna(subset=['id_kic'])
+        br['id_kic'] = br.id_kic.astype(int)
+        df = pd.merge(br,sm,on='id_kic')
+    elif table=='sm+platinum':
+        br = load_table('bruntt12')
+        sm = load_table('sm')
+        sm = sm.dropna(subset=['id_kic'])
+        sm['id_kic'] = sm.id_kic.astype(int)
+        br = br.dropna(subset=['id_kic'])
+        br['id_kic'] = br.id_kic.astype(int)
+        df = pd.merge(br,sm,on='id_kic')
     else:
         assert False, "table {} not valid table name".format(table)
     return df
+
 
 def add_prefix(df,prefix,ignore=['id']):
     namemap = {}
@@ -272,31 +445,6 @@ def latex_table(table):
             print line
 
 
-def radius_to_mass(radius):
-    """
-    Implement Weiss-Marcy Mass radius relationship
-    """
-
-    flux = 100 * FLUX_EARTH
-    
-    if isinstance(radius,Iterable):
-        mass = map(radius_to_mass,radius)
-        mass = np.array(mass)
-        return mass
-    
-    if radius < 1.5: 
-        rho = 2.43 + 3.39 * radius # g/cc WM14
-        mass = (rho / 5.51) * radius**3
-    elif 1.5 <= radius and radius <= 4.0: 
-        mass = 2.69 * radius**0.93
-    elif 4.0 < radius and radius < 9.0: 
-        mass = 0.298 * radius**1.89 * flux**0.057
-    elif 9.0 <= radius:
-        mass = np.nan
-    else:
-        mass = np.nan
-    return mass
-
 
 def load_pairs(generate_csv=False):
     pairsfn = 'data/pairs.csv'
@@ -341,50 +489,40 @@ def load_pairs(generate_csv=False):
     pairs.to_csv(pairsfn)
     return pairs
 
-def add_delta(pairs):
+
+# Pulled from Kepler data characteristics
+lc_per_quarter = {
+    0:476,
+    1:1639,
+    2:4354,
+    3:4370,
+    4:4397,
+    5:4634,
+    6:4398,
+    7:4375,
+    8:3279,
+    9:4768,
+    10:4573,
+    11:4754,
+    12:4044,
+    13:4421,
+    14:4757,
+    15:4780,
+    16:4203,
+    17:1556,
+}
+long_cadence_day = 29.7 / 60.0 / 24.0 # long cadence measurement in days
+
+def load_extended_kic():
     """
-    Compute the seperation between adjacent planet pairs interms of
-    mutual hill-radii.
-
+    Load KIC parameters with noise information
     """
-    
-    pairs['inner_mass'] = radius_to_mass(pairs.inner_iso_prad)
-    pairs['outer_mass'] = radius_to_mass(pairs.outer_iso_prad)
-    _delta = delta(
-        pairs.inner_mass,
-        pairs.outer_mass, 
-        pairs.mass, 
-        pairs.inner_smax, 
-        pairs.outer_smax
-    )
-    pairs['delta'] = _delta
-    return pairs
-
-def hill_radius(mass1, mass2, stellar_mass, a1, a2):
-    """
-    mass1 (float): mass of inner planet (Earth Masses)
-    mass2 (float): mass of outer planet (Earth Masses)
-    stellar_mass (float): stellar mass (Solar Masses)
-    a1 (float): semi-major axis (AU)
+    #qtbase = np.array(lc_per_quarter.values()) * long_cadence_day
 
 
-    """
-    mass1 = np.array(mass1) * u.M_earth
-    mass2 = np.array(mass2) * u.M_earth
+    return df 
 
-    mass1 = mass1.to(u.M_sun).value
-    mass2 = mass2.to(u.M_sun).value
 
-    _hill_radius = ( 
-        ((mass1 + mass2)/(3*stellar_mass))**(1.0/3.0) * 
-        0.5*(a1 + a2)
-    )
-    return _hill_radius
-
-def delta(mass1, mass2, stellar_mass, a1, a2):
-    _hill_radius = hill_radius(mass1, mass2, stellar_mass, a1, a2)
-    _delta = (a2 - a1)/_hill_radius
-    return _delta
 
 
 
