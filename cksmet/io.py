@@ -206,9 +206,8 @@ def load_table(table, verbose=False, cache=False):
     elif table=='lamost-dr2-cuts':
         # Apply similar set of cuts to the lamost sample.
         df = load_table('lamost-dr2',cache=1)
-        cuttypes = 'none faint lamonotdwarf'.split()
-
-        df = cksmet.cuts.add_cuts(df,cuttypes)
+        cuttypes = cksmet.cuts.lamo_cuttypes
+        df = cksmet.cuts.add_cuts(df, cuttypes, 'lamo')
 
     elif table=='buch14':
         df = pd.read_table(
@@ -295,7 +294,10 @@ def load_table(table, verbose=False, cache=False):
         return df
 
     elif table=='bruntt12':
-        t = Table.read('data/bruntt12/table3.dat',readme='data/bruntt12/ReadMe',format='ascii.cds')
+        t = Table.read(
+            'data/bruntt12/table3.dat',
+            readme='data/bruntt12/ReadMe',format='ascii.cds'
+        )
         namemap={'KIC':'id_kic','Teff':'steff','logg':'slogg','[Fe/H]':'smet'}
         df = t.to_pandas().rename(columns=namemap)[namemap.values()]
 
@@ -428,7 +430,6 @@ def table_bin(df, bins):
     dfbin['fe_p50'] = g.apply(lambda x : np.percentile(x, 50))
     return dfbin
 
-
 def latex_table(table):
     tab = load_table(table)
     if table=='cksbin-fe':
@@ -488,7 +489,6 @@ def load_pairs(generate_csv=False):
     pairs = pd.DataFrame(pairs)
     pairs.to_csv(pairsfn)
     return pairs
-
 
 # Pulled from Kepler data characteristics
 lc_per_quarter = {
