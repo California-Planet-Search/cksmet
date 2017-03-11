@@ -596,7 +596,8 @@ def cuts():
 
         
         _text = cut.plotstr + ' ({})'.format(len(dfcut))
-        text(0.95,0.05, _text,fontsize='small',transform=ax.transAxes, ha='right')
+        textkw = dict(fontsize='small',transform=ax.transAxes, ha='right')
+        text(0.95,0.05, _text, **textkw)
 
         semilogx()
         xlim(0.5,32)

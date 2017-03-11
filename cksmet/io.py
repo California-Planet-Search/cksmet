@@ -195,19 +195,6 @@ def load_table(table, verbose=False, cache=False):
         df = pd.merge(lamost,cks,on='id_kic')
         return df
 
-    elif table=='cks-cuts':
-        df =  cksphys.io.load_table(
-            'cks+nea+iso-floor+huber-phot+furlan',cache=1,
-            cachefn='../CKS-Physical/load_table_cache.hdf'
-        )
-        cuttypes = 'none notdwarf faint diluted grazing longper badprad'.split()
-        df = cksmet.cuts.add_cuts(df,cuttypes)
-        
-    elif table=='lamost-dr2-cuts':
-        # Apply similar set of cuts to the lamost sample.
-        df = load_table('lamost-dr2',cache=1)
-        cuttypes = cksmet.cuts.lamo_cuttypes
-        df = cksmet.cuts.add_cuts(df, cuttypes, 'lamo')
 
     elif table=='buch14':
         df = pd.read_table(
@@ -292,6 +279,26 @@ def load_table(table, verbose=False, cache=False):
             df['tobs'] += qobs * long_cadence_day * lc_per_quarter[q]
 
         return df
+
+    elif table=='cks-cuts':
+        df =  cksphys.io.load_table(
+            'cks+nea+iso-floor+huber-phot+furlan',cache=1,
+            cachefn='../CKS-Physical/load_table_cache.hdf'
+        )
+        cuttypes = 'none notdwarf faint diluted grazing longper badprad'.split()
+        df = cksmet.cuts.add_cuts(df, cksmet.cuts.plnt_cuttypes, 'cks')
+        
+    elif table=='lamost-dr2-cuts':
+        # Apply similar set of cuts to the lamost sample.
+        df = load_table('lamost-dr2',cache=1)
+        cuttypes = cksmet.cuts.lamo_cuttypes
+        df = cksmet.cuts.add_cuts(df, cuttypes, 'lamo')
+
+    elif table=='field-cuts':
+        # Apply similar set of cuts to the lamost sample.
+        df = load_table('huber14+cdpp',cache=1)
+        cuttypes = cksmet.cuts.plnt_cuttypes
+        df = cksmet.cuts.add_cuts(df, cuttypes, 'field')
 
     elif table=='bruntt12':
         t = Table.read(

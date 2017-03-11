@@ -432,7 +432,6 @@ class Stars(object):
             pd.Series: the number of transits for each star in the sample
         """
 
-
         return self.stars.tobs / per
 
     def _cdpp(self, tdur):

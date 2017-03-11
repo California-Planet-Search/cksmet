@@ -25,7 +25,11 @@ def add_anchored(*args,**kwargs):
     ax.add_artist(at)
 
 def samples():
-    fig,axL = subplots(nrows=3, ncols=2,figsize=(8,8))
+    ncols = 3
+    nrows = 3
+    height = 2.5 * nrows
+    width = 3 * ncols
+    fig, axL = subplots(nrows=nrows, ncols=ncols, figsize=(width, height))
     
     lamo = cksmet.io.load_table('lamost-dr2-cuts',cache=1)
     lamo = lamo.groupby('id_kic').first()
@@ -37,6 +41,12 @@ def samples():
     cks = cks.groupby('id_kic').first()
     cksc = cksc.groupby('id_kic').first()
 
+    
+    field = cksmet.io.load_table('huber14+cdpp',cache=1)
+
+    field = cksmet.cuts.add_cuts(field, cksmet.cuts.plnt_cuttypes, 'field')
+    fieldc = field.query('isany==False')
+
     plotkw = dict(marker='o',ms=1.5,lw=0)
     bins = np.arange(9,16.0001,0.2)
     histkw = dict(bins=bins,histtype='stepfilled')
@@ -44,35 +54,47 @@ def samples():
     bins = np.arange(-1.0,0.5001,0.1)
     smethistkw = dict(bins=bins,histtype='stepfilled')
 
-    sca(axL[0,0])
+    jcks = 0
+    jfield = 1 
+    jlamo = 2
+
+    # HR diagrams
+    sca(axL[0,jcks])
     plot(cks.cks_steff, cks.cks_slogg, color='LightGray',**plotkw)
     plot(cksc.cks_steff, cksc.cks_slogg,color='b',**plotkw)
-    add_anchored('CKS',loc=1)
 
-    sca(axL[0,1])
+    sca(axL[0,jfield])
+    print list(field.columns)
+    plot(field.huber_steff, field.huber_slogg, color='LightGray',rasterized=True,**plotkw)
+    plot(fieldc.huber_steff, fieldc.huber_slogg,color='b',rasterized=True,**plotkw)
+
+    sca(axL[0,2])
     plot(lamo.lamo_steff, lamo.lamo_slogg,color='LightGray',**plotkw)
     plot(lamoc.lamo_steff, lamoc.lamo_slogg,color='b',**plotkw)
-    add_anchored('LAMOST',loc=1)
 
-    sca(axL[1,0])
+    # KepMag
+    sca(axL[1,jcks])
     hist(cks.koi_kepmag,color='LightGray',**histkw)
     hist(cksc.koi_kepmag,color='b',**histkw)
-    add_anchored('CKS',loc=1)
 
-    sca(axL[1,1])
+    sca(axL[1,jfield])
+    hist(field.kepmag,color='LightGray',**histkw)
+    hist(fieldc.kepmag,color='b',**histkw)
+
+    sca(axL[1,2])
     hist(lamo.koi_kepmag,color='LightGray',**histkw)
     hist(lamoc.koi_kepmag,color='b',**histkw)
-    add_anchored('LAMOST',loc=1)
     
-    sca(axL[2,0])
+    # Metal
+    
+    sca(axL[2,jcks])
     hist(cks.cks_smet.dropna(),color='LightGray',**smethistkw)
     hist(cksc.cks_smet.dropna(),color='b',**smethistkw)
-    add_anchored('CKS',loc=1)
 
-    sca(axL[2,1])
+
+    sca(axL[2,2])
     hist(lamo.lamo_smet,color='LightGray',**smethistkw)
     hist(lamoc.lamo_smet,color='b',**smethistkw)
-    add_anchored('LAMOST',loc=1)
 
     setp(
         axL[0,:], xlim=(7000,4000), ylim=(5,3.0), xlabel='Teff (K)', 
@@ -82,6 +104,19 @@ def samples():
 
     setp(axL[1,:],ylabel='Number of Stars',xlabel='Kepmag')
     setp(axL[2,:],ylabel='Number of Stars',xlabel='[Fe/H]')
+
+    for ax in axL[:,2]:
+        sca(ax)
+        add_anchored('LAMOST',loc=1)
+        
+    for ax in axL[:,jcks]:
+        sca(ax)
+        add_anchored('CKS',loc=1)
+
+    for ax in axL[:,jfield]:
+        sca(ax)
+        add_anchored('Field',loc=1)
+
 
     for ax, letter in zip(axL.flatten(),string.ascii_lowercase):
         sca(ax)
