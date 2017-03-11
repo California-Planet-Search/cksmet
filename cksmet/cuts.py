@@ -18,7 +18,7 @@ plotdict ={
 }
 
 lamo_cuttypes = 'none faint badteff badlogg'.split()
-plnt_cuttypes = 'none faint badteff badlogg longper allfp lowpprad diluted grazing'.split()
+plnt_cuttypes = 'none faint badteff badlogg lowpsrad longper allfp diluted grazing'.split()
 
 samples = 'cks lamo field'.split()
 
@@ -37,14 +37,14 @@ class CutBase(object):
 
 class CutNone(CutBase):
     cuttype = 'none'
-    notstr = 'Full sample'
+    plotstr = 'Full sample'
     texstr = 'Full sample'
     def cut(self):
         return self.allpass()
 
 class CutFaint(CutBase):
     cuttype = 'faint'
-    notstr = '$Kp$ < 14.2'
+    plotstr = '$Kp$ < 14.2'
     texstr = '$Kp$ < 14.2'
     def cut(self):
         if self.sample=='cks':
@@ -62,7 +62,7 @@ class CutTeff(CutBase):
     """
     cuttype = 'badteff'
     texstr = r'${teff:}$ = $4700-6500$ K'.format(**texdict)
-    plotstr = r'${teff:}$ = $4700-6500$ K'.format(**plotdict)
+    plotstr = r'${teff:}$ = 4700$-$6500 K'.format(**plotdict)
     def cut(self):
         if self.sample=='cks':
             teff = self.df['cks_steff']
@@ -79,6 +79,7 @@ class CutLogg(CutBase):
     """
     cuttype = 'badlogg'
     texstr = '${logg:}$ = $3.9-5.0$ dex'.format(**texdict)
+    plotstr = 'log g = 3.9$-$5.0 dex'.format(**plotdict)
     def cut(self):
         if self.sample=='cks':
             logg = self.df['cks_slogg']
@@ -93,7 +94,7 @@ class CutAllFP(CutBase):
     """Remove stars with a FP designation from a number of catalogs
     """
     cuttype = 'allfp'
-    notstr = 'Not FP'
+    plotstr = 'Not FP'
     texstr = 'Not a false positive'
     def cut(self):
         if self.sample=='cks':
@@ -101,48 +102,59 @@ class CutAllFP(CutBase):
             b2 = self.df['cks_fp']==1
             return b1 | b2
         elif self.sample=='field':
-            return np.zeros(len(self.df)).astype(bool)
+            return self.allpass()
 
 class CutLowPPrad(CutBase):
     cuttype = 'lowpprad'
     texstr = '$\sigma(R_p) / R_p < 12\%$'
+    plotstr = texstr
     def cut(self):
         if self.sample=='cks':
             return self.df['iso_prad_err1']  / self.df['iso_prad'] > 0.12
         elif self.sample=='field':
-            return np.zeros(len(self.df)).astype(bool)
+            return self.allpass()
+
+class CutLowPSrad(CutBase):
+    cuttype = 'lowpsrad'
+    texstr = '$\sigma(R_\star) / R_\star < 12\%$'
+    plotstr = texstr
+    def cut(self):
+        if self.sample=='cks':
+            return self.df['iso_srad_err1']  / self.df['iso_srad'] > 0.12
+        elif self.sample=='field':
+            return self.allpass()
 
 class CutDiluted(CutBase):
     cuttype= 'diluted'
-    notstr = 'dilution < 5%'
+    plotstr = 'dilution < 5%'
     texstr = 'Radius correction factor < 5\%'
     def cut(self):
         if self.sample=='cks':
             return (self.df.furlan_rcorr_avg - 1) > 0.05
         elif self.sample=='field':
-            return np.zeros(len(self.df)).astype(bool)
+            return self.allpass()
 
 class CutGrazing(CutBase):
     cuttype = 'grazing'
-    notstr = '$b$ < 0.7' 
+    plotstr = '$b$ < 0.7' 
     texstr = '$b$ < 0.7'
     def cut(self):
         if self.sample=='cks':
             return self.df['koi_impact'] > 0.7 
         elif self.sample=='field':
-            return np.zeros(len(self.df)).astype(bool)
+            return self.allpass()
 
 class CutLongPer(CutBase):
     cuttype = 'longper'
-    notstr = '$P$ < 350 d'
+    plotstr = '$P$ < 350 d'
     texstr = '$P$ < 350 d'
     def cut(self):
         if self.sample=='cks':
             return self.df['koi_period'] > 350
         elif self.sample=='lamo':
-            return np.zeros(len(self.df)).astype(bool)
+            return self.allpass()
         elif self.sample=='field':
-            return np.zeros(len(self.df)).astype(bool)
+            return self.allpass()
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 

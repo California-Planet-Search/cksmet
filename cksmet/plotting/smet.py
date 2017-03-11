@@ -17,6 +17,8 @@ texre = '\mathregular{R}_\mathregular{E}'
 
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
 
+from cksmet.plotting.samples import add_anchored
+
 def prad_fe_label():
     # median planet radius error
     xlabel('Planet size (Earth-radii)')
@@ -552,6 +554,7 @@ def prad_hist_stacked_small(prad_bins=[0.5,1.0,2.0,4.0,8.0,16]):
 
     fig.set_tight_layout(True)
 
+import string
 
 def cuts():
     df =  cksphys.io.load_table(
@@ -559,14 +562,15 @@ def cuts():
         cachefn='../CKS-Physical/load_table_cache.hdf'
     )
 
-    cuttypes = cksmet.cuts.cuttypes
+    cuttypes = cksmet.cuts.plnt_cuttypes
     nrows = len(cuttypes)
-    ncols = 1
 
-    width = 8
-    height = 5
-    nrows = 2
-    ncols = 4
+    nrows = 3
+    ncols = 3
+
+    width = ncols * 2.5
+    height = nrows * 2.5
+
     fig, axL = subplots(
         nrows=nrows,ncols=ncols,figsize=(width,height),
         sharex=True,sharey=True
@@ -577,23 +581,26 @@ def cuts():
     iplot = 0
 
     for cuttype in cuttypes:
-        sca(axL[iplot])
+        ax = axL[iplot] 
+        sca(ax)
+        
         key = 'is'+cuttype
-        cut = cksmet.cuts.get_cut(cuttype)
-
-        df[key] = cut(df)
+        obj = cksmet.cuts.get_cut(cuttype)
+        cut = obj(df,'cks')
+        df[key] = cut.cut()
         bpass += df[key].astype(int)
         plotkw = dict(ms=4)
         plot(df.iso_prad, df.cks_smet,'.',color='LightGray',**plotkw)
         dfcut = df[bpass==0]
         plot(dfcut.iso_prad, dfcut.cks_smet,'.',**plotkw)
+
         
-        _text = cut.notstr + '\n({})'.format(len(dfcut))
-        text(4,-0.6,_text,fontsize='small')
+        _text = cut.plotstr + ' ({})'.format(len(dfcut))
+        text(0.95,0.05, _text,fontsize='small',transform=ax.transAxes, ha='right')
 
         semilogx()
-        xlim(0.5,20)
-        xt = [0.5,1.0,2.0,4.0,8.0,16]
+        xlim(0.5,32)
+        xt = [0.5,1,2,4,8, 16, 32]
         xticks(xt,xt)
         iplot+=1
 
@@ -601,3 +608,10 @@ def cuts():
     setp(axL[-1,:],xlabel='$R_p\, (R_{\oplus})$')
     setp(axL[:,0],ylabel='[Fe/H]')
     fig.set_tight_layout(True)
+
+    for ax, letter in zip(axL.flatten(),string.ascii_lowercase):
+        sca(ax)
+        add_anchored(
+            letter,loc=2, frameon=False, 
+            prop=dict(size='large', weight='bold')
+        )

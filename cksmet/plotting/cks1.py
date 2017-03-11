@@ -21,7 +21,6 @@ def add_anchored(*args,**kwargs):
     at = AnchoredText(*args,**kwargs)
     ax.add_artist(at)
 
-
 def comparison(key,x1,x2,label1='CKS',label2='Comp',fig0=None, axL0=None):
     if key=='steff':
         x3 = x2 - x1 
@@ -241,7 +240,7 @@ def cks_comparisons():
 
     for plotname in plotnames:
         print "comparison: {}".format(plotname)
-        cksmet.plotting.samples.comparison_three(plotname)
+        comparison_three(plotname)
         gcf().savefig('paper/fig_{}.pdf'.format(plotname))
 
 def provision_figure():

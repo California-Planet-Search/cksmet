@@ -1,3 +1,7 @@
+import string
+
+from matplotlib.ticker import MaxNLocator
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 from matplotlib.pylab import *
 import seaborn as sns
 import pandas as pd
@@ -5,10 +9,7 @@ import pandas as pd
 import cksphys.io
 import cksmet.io
 import cksmet.cuts
-from matplotlib.ticker import MaxNLocator
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
-import string
 figsize = (4,5)
 errorbar_kw = dict(fmt='.',markersize=5,color='b')
 
@@ -17,6 +18,7 @@ sns.set_color_codes()
 
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
 texteff = '$\mathregular{T}_{\mathregular{eff}}$'
+
 def add_anchored(*args,**kwargs):
     ax = gca()
     at = AnchoredText(*args,**kwargs)
