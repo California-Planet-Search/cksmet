@@ -12,7 +12,7 @@ from cpsutils.pdplus import LittleEndian
 import cksmet.cuts
 from scipy.io import idl
 
-def load_table(table, verbose=False, cache=False):
+def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     """Load tables used in cksphys
 
     Args:
@@ -29,15 +29,23 @@ def load_table(table, verbose=False, cache=False):
 
     """
 
-    hdffn = 'load_table_cache.hdf'
     if cache==1:
-        df = pd.read_hdf(hdffn,table)
-        print "read table {} from {}".format(table,hdffn)
-        return df
+        try:
+            df = pd.read_hdf(cachefn,table)
+            print "read table {} from {}".format(table,cachefn)
+            return df
+        except IOError:
+            print "Could not find cache file: %s" % cachefn
+            print "Building cache..."
+            cache=2
+        except KeyError:
+            print "Cache not built for table: %s" % table
+            print "Building cache..."
+            cache=2
     if cache==2:
         df = load_table(table, cache=False)
         print "writing table {} to cache".format(table)
-        df.to_hdf(hdffn,table)
+        df.to_hdf(cachefn,table)
         return df
 
     '''
@@ -217,8 +225,11 @@ def load_table(table, verbose=False, cache=False):
         cks = load_table('cks')
         df = pd.merge(df,cks)
     elif table=='kic':
-        df = pd.read_hdf('data/kic.hdf','kic')
-        namemap = {'KICID':'id_kic','TEFF':'steff','LOGG':'slogg','FEH':'smet'}
+        df = pd.read_hdf('data/kic-mast.hdf','kic')
+        namemap = {
+            'kic_kepler_id':'id_kic','kic_teff':'steff','kic_logg':'slogg',
+            'kic_feh':'smet'
+        }
         df = df.rename(columns=namemap)[namemap.values()]
         df = add_prefix(df,'kic_')
 
@@ -248,7 +259,7 @@ def load_table(table, verbose=False, cache=False):
         cks = load_table('cks')
         df = pd.merge(df,cks)
 
-    elif table=="huber14+cdpp":
+    elif table=='huber14+cdpp':
         df = pd.read_hdf('data/kic.hdf')
         df = df.rename(columns={
             'KEPMAG':'kepmag','KICID':'id_kic','CDPP3':'cdpp3','CDPP6':'cdpp6',

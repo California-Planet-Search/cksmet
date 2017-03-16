@@ -4,10 +4,8 @@ from astropy import constants as c
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import RegularGridInterpolator
-
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
-
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
 
 per_bins_dict = {
@@ -28,30 +26,8 @@ per_bins_dict = {
 }    
 
 prad_bins_dict = {
-    'xxfine': [
-         0.5  ,   0.522,   0.545,   0.569,   0.595,   0.621,   0.648,
-         0.677,   0.707,   0.738,   0.771,   0.805,   0.841,   0.878,
-         0.917,   0.958,   1.   ,   1.044,   1.091,   1.139,   1.189,
-         1.242,   1.297,   1.354,   1.414,   1.477,   1.542,   1.61 ,
-         1.682,   1.756,   1.834,   1.915,   2.   ,   2.089,   2.181,
-         2.278,   2.378,   2.484,   2.594,   2.709,   2.828,   2.954,
-         3.084,   3.221,   3.364,   3.513,   3.668,   3.83 ,   4.   ,
-         4.177,   4.362,   4.555,   4.757,   4.967,   5.187,   5.417,
-         5.657,   5.907,   6.169,   6.442,   6.727,   7.025,   7.336,
-         7.661,   8.   ,   8.354,   8.724,   9.11 ,   9.514,   9.935,
-        10.375,  10.834,  11.314,  11.815,  12.338,  12.884,  13.454,
-        14.05 ,  14.672,  15.322,  16.   ],
-    'xfine': [ 
-        0.5 ,   0.55,   0.59,   0.65,   0.71,   0.77,   0.84,   0.92,
-        1.  ,   1.09,   1.19,   1.3 ,   1.41,   1.54,   1.68,   1.83,
-        2.  ,   2.18,   2.38,   2.59,   2.83,   3.08,   3.36,   3.67,
-        4.  ,   4.36,   4.76,   5.19,   5.66,   6.17,   6.73,   7.34,
-        8.  ,   8.72,   9.51,  10.37,  11.31,  12.34,  13.45,  14.67,  16.
-    ],
-    'fine': [ 
-         0.5, 0.59,   0.71, 0.84, 1.00, 1.19, 1.41, 1.68,
-         2.0, 2.38,   2.83, 3.36, 4.00, 4.76, 5.66, 6.73,
-         8.0, 9.51,  11.31, 13.45, 16.0],
+    'xfine': np.round(np.logspace(np.log10(0.5),np.log10(32),49 ),2),
+    'fine': np.round(np.logspace(np.log10(0.5),np.log10(32),25 ),2),
     'coarse': [ 
          0.5,  0.71, 1.00, 1.41, 2.0, 2.83, 4.00, 5.66, 8.0, 11.31, 16.0
     ]
@@ -61,63 +37,19 @@ smet_bins_dict = {
     'fine': np.arange(-0.8,0.6001,0.2)
 }
 
+
 def _sbins_to_sbins_id(sbins):
     """Convenience function for converting bin names to bins_id names"""
     return ['{}_bin_id'.format(sbin) for sbin in sbins]
 
-
-class Occurrence():
+class Grid(object):
     """
-    Occurrence Object
+    Grid
 
-    This object allows one to compute planet occurrence in bins of
-    orbital period, planet radius, and stellar metallicity
-
-    Args:
-        df (pandas.DataFrame): Planets. Must contain the following rows:
-            - srad: stellar radius (Solar-radii)
-            - per: planet orbital period (days)
-            - prad: planet radius (Earth-radii) 
-            - smax: planet semi-major axis (AU)
-            - mes: planet multiple event statistic
-            - impact: planet impact parameter
-        prob_det_mes_name (str): Probability of detection as function of MES
-        imppar_transit (float): Maximum impact parameter allowed.
-
+    This object creates grids used to compute occurrence and completeness
     """
-    plnt_columns = ['srad','per','prad','smax','impact','mes']
-    prob_det_mes_names = ['step-12','step-15']
 
-    def __init__(self, plnt, prob_det_mes_name, impact_transit):
-        for col in self.plnt_columns:
-            assert list(plnt).count(col)==1, \
-                "DataFrame must contain {}".format(col)
-
-        assert self.prob_det_mes_names.count(prob_det_mes_name)==1,\
-            "prob_det_mes_name must be one of\n" + "\n".join(prob_det_mes_names)
-
-        idxdrop = plnt[plnt.impact > impact_transit].index
-        ndrop = len(idxdrop)
-        print "dropping {} planets, impact > {}".format(ndrop,impact_transit)
-
-        plnt = plnt.drop(idxdrop)
-        if prob_det_mes_name=='step-12':
-            idxdrop = plnt[plnt.mes < 12].index
-            ndrop = len(idxdrop)
-            print "dropping {} planets, mes < 12".format(ndrop,12)
-        elif prob_det_mes_name=='step-15':
-            idxdrop = plnt[plnt.mes < 15].index
-            ndrop = len(idxdrop)
-            print "dropping {} planets, mes < 15".format(ndrop,12)
-        
-        plnt = plnt.drop(idxdrop)
-
-        self.plnt = plnt
-        self.prob_det_mes_name = prob_det_mes_name
-        self.impact_transit = impact_transit
-
-
-    def add_bins(self, bins_dict, spacing_dict):
+    def __init__(self, bins_dict, spacing_dict):
         """Lay down grid for computing occurrence
         
         Args:
@@ -137,11 +69,26 @@ class Occurrence():
         self.bins2 = {}
         self.binsc = {}
         self.nbins = {}
+
         for key in self.bins.keys():
             self._add_bin_edges(key)
             self.nbins[key] = len(self.bins1[key])
-            self._label_bins(key)
-            
+
+
+        ds = xr.Dataset(coords=self.binsc)
+        for sbin in self.bins.keys():
+            ds.coords[sbin] = self.binsc[sbin]
+
+        for key in self.bins.keys():
+            coord = {key: self.binsc[key]}
+            ds[key+'c'] = xr.DataArray(self.binsc[key],coord)
+            ds[key+'1'] = xr.DataArray(self.bins1[key],coord)
+            ds[key+'2'] = xr.DataArray(self.bins2[key],coord)
+
+        # This line makes all data variables 2D
+        ds = ds.to_dataframe().to_xarray()
+        self.ds = ds
+
     def _add_bin_edges(self, key):
         """Computes bin edges and centers for the specified bins"""
         bins = self.bins[key]
@@ -167,149 +114,13 @@ class Occurrence():
         self.bins2[key] = bins2
         self.binsc[key] = binsc
 
-    def _label_bins(self, key):
-        """
-        Assign rows to bins
-
-        Given a columnn `key` and `bins` figure out which bin each row
-        belongs to. Also for every row, return the edges and center of the
-        bins.
-
-        Args:
-            df (DataFrame): Must contain `key` as a column
-            key (str): string label of bin
-            bins (array): list of bin edges 
-            spacing (str): linear/log how to calculate bin center
-
-        """
-        sbin_id = '{}_bin_id'.format(key)
-        sbin1 = '{}_bin1'.format(key)
-        sbin2 = '{}_bin2'.format(key)
-        sbinc = '{}_binc'.format(key)
-        plnt = self.plnt
-        for col in [sbin_id, sbin1, sbin2, sbinc]:
-            plnt[col] = None
-
-        bins = self.bins[key]
-        for i in range(len(bins)-1):
-            bin1 = self.bins1[key][i]
-            bin2 = self.bins2[key][i]
-            binc = self.binsc[key][i]
-            idx = plnt[plnt[key].between(bin1,bin2)].index
-            plnt.ix[idx,sbin_id] = i
-            plnt.ix[idx,sbin1] = bin1
-            plnt.ix[idx,sbin2] = bin2
-            plnt.ix[idx,sbinc] = binc
- 
-        self.plnt = plnt
-
-    def add_prob(self, st):
-        """For each planet compute transit and detection probability
-        """
-        plnt = self.plnt
-        a = np.array(plnt['smax']) * u.AU
-        srad = np.array(plnt['srad']) * c.R_sun
-        plnt['prob_tr'] = (srad * self.impact_transit / a).cgs.value
-        plnt['inv_prob_tr'] = plnt['prob_tr']**-1
-
-        i = 0
-        for i, row in plnt.iterrows():
-            plnt.ix[i,'prob_det'] = st.prob_det(row.per,row.prad)
-            if i%100==0:
-                print row.per,row.prad,st.prob_det(row.per,row.prad)
-
-        plnt['prob_total'] = plnt['prob_tr'] * plnt['prob_det']
-        for suffix in 'prob_tr prob_det prob_total'.split():
-            plnt['inv_'+suffix] = plnt[suffix]**-1.0
-        self.plnt = plnt
-
-    def compute_occurrence(self, sbins, st):
-        """Count planets in bins
-
-        For a planet at the center of the bin what fraction of the
-        stars in the sample, could we detect?
-
-        Args:
-            sbins (list): list of strings specifying the bins to compute 
-                occurrence over
-
-        Returns:
-            xarray: data with the following quantities computed in each bin
-                - plnt_transit_sum: number of transiting planets
-                - plnt_total_sum: number planets (including non-transiting)
-        """
-        labels = [pd.cut(self.plnt[sbin],self.bins[sbin]) for sbin in sbins]
-        g = self.plnt.groupby(labels,as_index=True)
-        grid = g[['id_starname']].count()
-        
-        # Transiting and detected planets per bin
-        grid['plnt_trdet_sum'] = g[['inv_prob_transit']].sum()
-
-        # Transiting planets per bin (accounting for missed transiting planets)
-        grid['plnt_tr_sum'] = g[['inv_prob_det']].sum()
-
-        # Planets per bin (accounting for missed and non-transiting planets)
-        grid['plnt_sum'] = g[['inv_prob_total']].sum()
-        grid['plnt_occur'] = grid['plnt_sum'] / st.nstars
-
-        grid = grid.to_xarray()
-        for sbin in sbins :
-            grid.coords[sbin] = self.binsc[sbin]
-
-        for key in self.bins.keys():
-            coord = {key: self.binsc[key]}
-            grid[key+'c'] = xr.DataArray(self.binsc[key],coord)
-            grid[key+'1'] = xr.DataArray(self.bins1[key],coord)
-            grid[key+'2'] = xr.DataArray(self.bins2[key],coord)
-        self.grid = grid
-
-    def prob_det_grid(self, st):
-        """Adds a field to the grid attribute
-        """
-        grid = self.grid
-        grid = grid.to_dataframe()
-        grid['prob_det'] = -1 
-
-        i = 0
-        print "perc pradc prob_det"
-        for idx, row in grid.iterrows():
-            grid.ix[idx,'prob_det'] = st.prob_det(row.perc, row.pradc)
-            s ="{perc:.3f} {pradc:.3f} {prob_det:.3f}".format(
-                **grid.ix[idx] )
-            if i%100==0:
-                print s
-            i+=1
-
-        self.grid = grid.to_xarray()
-
-    def prob_tr_grid(self, st):
-        """Adds a field to the grid attribute
-        """
-        grid = self.grid
-        grid = grid.to_dataframe()
-        grid['prob_tr'] = -1 
-
-        i = 0
-        s ="perc pradc prob_tr"
-        print s
-        for idx,row in grid.iterrows():
-            grid.ix[idx,'prob_tr'] = st.prob_tr(row.perc)
-            s ="{perc:.3f} {pradc:.3f} {prob_tr:.3f}".format(
-                **grid.ix[idx] )
-            if i%100==0 :
-                print s
-            i+=1
-
-        self.grid = grid.to_xarray()
-
-
-class Stars(object):
+class Completeness(object):
     """
-    Class for computing the number of stars in my sample around which
-    a planet could be detected.
+    Class for that can compute completeness using the noise properties
+    of a representive ensemble of stars.  
     """
-    
-    def __init__(self, stars, occur):
+
+    def __init__(self, stars, grid, prob_det_mes_name, impact_transit):
         """
         Args:
             stars (pandas.DataFrame): Sample of stars from which planets 
@@ -322,7 +133,7 @@ class Stars(object):
                 - tobserved: days in which target was observed
                 - smass: Stellar mass (solar masses) 
                 - srad: Stellar radius (solar-radii) 
-        
+            grid (Grid): Grid object that contains boundaries of bins.
 
         """
         self.stars = stars
@@ -342,8 +153,10 @@ class Stars(object):
         self.x0 = x0 
         self.x1 = x1
         self.values = values
-        self.occur = occur
         self.nstars = len(stars)
+        self.grid = grid
+        self.prob_det_mes_name = prob_det_mes_name
+        self.impact_transit = impact_transit
 
     def mes(self, per, prad):
         """
@@ -464,14 +277,14 @@ class Stars(object):
         """
         out = np.zeros_like(mes) 
         mes = np.array(mes) 
-        if self.occur.prob_det_mes_name=='step-15':
-            out[mes > 15] = 1.0
-        elif self.occur.prob_det_mes_name=='step-12':
-            out[mes > 12] = 1.0
+        if self.prob_det_mes_name.count('step')==1:
+            min_mes = self.prob_det_mes_name.split('-')[1]
+            min_mes = float(min_mes)
+            out[mes > min_mes] = 1.0
 
         return out
 
-    def prob_det(self, per, prad):
+    def prob_det(self, per, prad, method='direct'):
         """Probability that a planet would be detectable
 
         Probability that transiting planet with orbital period `per`
@@ -481,23 +294,38 @@ class Stars(object):
         Args:
             per (float): orbital period
             prad (float): planet size
+            method (str): One of the following:
+                - direct: compute prob of detectability by counting stars 
+                  where the MES is sufficient to detect.
+                - interp: use the interpolator
 
         Returns:
             float: fraction of stars in sample where we could have detected 
                 planet
 
         """        
-        mes = self.mes_scaled(per, prad)
-        _prob_det = 1.0*self.prob_det_mes(mes).sum() / self.nstars 
+        
+        if method=='direct':
+            mes = self.mes_scaled(per, prad)
+            _prob_det = 1.0*self.prob_det_mes(mes).sum() / self.nstars 
+        elif method=='interp': 
+            #_prob_det = self.prob_det_interp((per, prad))
+            _prob_det = self.prob_det_interp(per, prad, grid=False)
+        else:
+            assert False,'Invalid method'
+
         return _prob_det
 
     def prob_tr(self, per):
+        """
+        Probability that a given planet would transit
+        """
         a = self._smax(per)
         srad = (np.array(self.stars['srad']) * u.R_sun).to(u.AU).value
-        _prob_tr = srad * self.occur.impact_transit / a
+        _prob_tr = srad * self.impact_transit / a
         return _prob_tr.mean()
 
-    def compute_mes_factor(self,plnt_mes):
+    def compute_mes_factor(self, plnt_mes):
         """
         Using a simple SNR calculation, we tend to over estimate the MES
         that the pipeline would have found.
@@ -512,29 +340,12 @@ class Stars(object):
              
         """
         plnt_mes = plnt_mes.copy()
-        plnt_mes['mes_formula'] = np.nan
-
-        i = 0
-        for id_koicand, row in plnt_mes.iterrows():
-            try:
-                mes_formula = self.mes(row.per,row.prad)
-                mes_formula = mes_formula.ix[row.id_kic]
-                mes_pipeline = row.mes
-                plnt_mes.ix[id_koicand,'mes_formula'] = mes_formula
-                plnt_mes.ix[id_koicand,'mes_pipeline'] = mes_pipeline 
-                if i< 20:
-                    s =  "{} {:.2f} {:.2f}".format(
-                        id_koicand, mes_pipeline, mes_formula
-                    )
-                    print s
-            except KeyError:
-                pass
-        
-            i+=1
-
         self.plnt_mes = plnt_mes
-        logmes_pipeline = np.log10(plnt_mes.mes_pipeline)
-        logmes_formula = np.log10(plnt_mes.mes_formula)
+        self.plnt_mes['mes_pipeline'] = self.plnt_mes.mes
+        self._compute_mes_factor_loop(False)
+
+        logmes_pipeline = np.log10(self.plnt_mes.mes_pipeline)
+        logmes_formula = np.log10(self.plnt_mes.mes_formula)
         logmes_diff_med = np.nanmedian(logmes_formula - logmes_pipeline)
         logmes_diff_std = np.nanstd(logmes_formula - logmes_pipeline)
         print "med(log(mes_formula/mes_pipeline)) {:.2f} (dex)".format(
@@ -543,15 +354,23 @@ class Stars(object):
         self.logmes_diff_std = logmes_diff_med
         self.logmes_diff_med = logmes_diff_std 
         self.mesfac = 10**(-1.0 * logmes_diff_med)
-
+        self._compute_mes_factor_loop(True)
+ 
+    def _compute_mes_factor_loop(self, scaled):
         i = 0
-        for id_koicand, row in plnt_mes.iterrows():
+        for id_koicand, row in self.plnt_mes.iterrows():
             try:
-                mes_formula = self.mes_scaled(row.per,row.prad)
-                mes_formula = mes_formula.ix[row.id_kic]
+                if scaled:
+                    fmes = self.mes_scaled
+                    key = 'mes_formula_scaled' 
+                else:
+                    fmes = self.mes
+                    key = 'mes_formula' 
+
+                mes_formula = fmes(row.per,row.prad).ix[row.id_kic]
                 mes_pipeline = row.mes
-                plnt_mes.ix[id_koicand,'mes_formula_scaled'] = mes_formula
-                plnt_mes.ix[id_koicand,'mes_pipeline'] = mes_pipeline 
+                self.plnt_mes.ix[id_koicand,key] = mes_formula
+
                 if i< 20:
                     s =  "{} {:.2f} {:.2f}".format(
                         id_koicand, mes_pipeline, mes_formula
@@ -561,5 +380,193 @@ class Stars(object):
                 pass
         
             i+=1
+
+    def compute_grid_prob_det(self,verbose=0):
+        """Compute a grid of detection probabilities"""
+        def rowfunc(row):
+            return self.prob_det(row.perc, row.pradc)
+
+        def callback(row):
+            s ="{perc:.3f} {pradc:.3f} {temp:.3f}".format(**row)
+            if verbose>0:
+                print s
+
+        self.grid.ds['prob_det'] = self._grid_loop(rowfunc, callback)
+
+    def compute_grid_prob_tr(self,verbose=0):
+        """Compute a grid of transit probabilities"""
+        def rowfunc(row):
+            return self.prob_tr(row.perc)
+
+        def callback(row):
+            s ="{perc:.3f} {pradc:.3f} {temp:.3f}".format(**row)
+            if verbose>0:
+                print s
+
+        self.grid.ds['prob_tr'] = self._grid_loop(rowfunc, callback)
+
+    def _grid_loop(self, rowfunc, callback):
+        df = self.grid.ds.to_dataframe()
+        i = 0
+        for idx, row in df.iterrows():
+            df.ix[idx,'temp'] = rowfunc(row)
+            if i%100==0:
+                callback(df.ix[idx])
+            i+=1
+        return df['temp'].to_xarray()
+
+    def init_prob_det_interp(self):
+        """
         
-                
+        """
+        # Define the regular grid for interpolation
+        x0 = np.array(self.grid.ds.per)
+        x1 = np.array(self.grid.ds.prad)
+        points  = (x0, x1) 
+        values = self.grid.ds['prob_det'].transpose('per','prad')
+        #self.prob_det_interp = RegularGridInterpolator(
+        #    points, values, bounds_error=False
+        #)        
+        self.prob_det_interp = RectBivariateSpline(
+            x0, x1, values
+        )        
+
+class Occurrence(object):
+    """
+    Occurrence Object
+
+    This object allows one to compute planet occurrence in bins of
+    orbital period, planet radius, and stellar metallicity
+
+    Args:
+        plnt (pandas.DataFrame): One of each row per planet
+            - srad: stellar radius (Solar-radii)
+            - per: planet orbital period (days)
+            - prad: planet radius (Earth-radii) 
+            - smax: planet semi-major axis (AU)
+            - mes: planet multiple event statistic
+            - impact: planet impact parameter
+        nstars (float): number of stars from which our sample was drawn
+        comp (Completeness): completeness object
+    
+    """
+    plnt_columns = ['srad','per','prad','smax','impact','mes']
+    def __init__(self, plnt, nstars, comp, grid):
+        for col in self.plnt_columns:
+            assert list(plnt).count(col)==1, \
+                "DataFrame must contain {}".format(col)
+
+        idxdrop = plnt[plnt.impact > comp.impact_transit].index
+        ndrop = len(idxdrop)
+        print "dropping {} planets, impact > {}".format(ndrop,comp.impact_transit)
+
+        plnt = plnt.drop(idxdrop)
+        if comp.prob_det_mes_name.count('step')==1:
+            min_mes = comp.prob_det_mes_name.split('-')[1]
+            min_mes = float(min_mes)
+            idxdrop = plnt[plnt.mes < min_mes].index
+            ndrop = len(idxdrop)
+            print "dropping {} planets, mes < {}".format(ndrop,min_mes)
+
+        plnt = plnt.drop(idxdrop)
+
+        self.plnt = plnt
+        self.nstars = nstars
+        self.comp = comp
+        self.grid = grid
+
+    def compute_occurrence(self):
+        """Compute occurrence over grid
+
+        For a planet at the center of the bin what fraction of the
+        stars in the sample, could we detect?
+
+        Args:
+            sbins (list): list of strings specifying the bins to compute 
+                occurrence over
+
+        Returns:
+            xarray: data with the following quantities computed in each bin
+                - plnt_transit_sum: number of transiting planets
+                - plnt_total_sum: number planets (including non-transiting)
+        """
+        plnt = self.plnt
+        a = np.array(plnt['smax']) * u.AU
+        srad = np.array(plnt['srad']) * c.R_sun
+
+        # Compute detectability for each transit
+        plnt['prob_tr'] = (srad * self.comp.impact_transit / a).cgs.value
+        plnt['prob_det'] = self.comp.prob_det(
+            plnt['per'], plnt['prad'], method='interp'
+        )
+        plnt['prob_trdet'] = plnt['prob_tr'] * plnt['prob_det']
+        for suffix in 'prob_tr prob_det prob_trdet'.split():
+            plnt['inv_'+suffix] = plnt[suffix]**-1.0
+
+        # Compute agg quantities in bins
+        labels = []
+        for sbin in self.grid.bins.keys():
+            labels+=[pd.cut(self.plnt[sbin],self.grid.bins[sbin])]
+
+        g = plnt.groupby(labels,as_index=True)
+        df = g[['id_starname']].count()
+        
+        # Transiting and detected planets per bin
+        df['plnt_trdet_sum'] = g[['inv_prob_tr']].count()
+
+        # Transiting planets per bin (accounting for missed transiting planets)
+        df['plnt_tr_sum'] = g[['inv_prob_det']].sum()
+
+        # Planets per bin (accounting for missed and non-transiting planets)
+        df['plnt_sum'] = g[['inv_prob_trdet']].sum()
+        df['plnt_occur'] = df['plnt_sum'] / self.nstars
+        ds = df.to_xarray()
+        for sbin in self.grid.bins.keys():
+            ds.coords[sbin] = self.grid.binsc[sbin]
+
+        ds = xr.merge([self.grid.ds,ds])
+        return ds 
+
+    def _label_bins(self, key):
+        """
+        Assign rows to bins
+
+        Given a columnn `key` and `bins` figure out which bin each row
+        belongs to. Also for every row, return the edges and center of the
+        bins.
+
+        Args:
+            df (DataFrame): Must contain `key` as a column
+            key (str): string label of bin
+            bins (array): list of bin edges 
+            spacing (str): linear/log how to calculate bin center
+
+        """
+        sbin_id = '{}_bin_id'.format(key)
+        sbin1 = '{}_bin1'.format(key)
+        sbin2 = '{}_bin2'.format(key)
+        sbinc = '{}_binc'.format(key)
+        plnt = self.plnt
+        for col in [sbin_id, sbin1, sbin2, sbinc]:
+            plnt[col] = None
+
+        bins = self.bins[key]
+        for i in range(len(bins)-1):
+            bin1 = self.bins1[key][i]
+            bin2 = self.bins2[key][i]
+            binc = self.binsc[key][i]
+            idx = plnt[plnt[key].between(bin1,bin2)].index
+            plnt.ix[idx,sbin_id] = i
+            plnt.ix[idx,sbin1] = bin1
+            plnt.ix[idx,sbin2] = bin2
+            plnt.ix[idx,sbinc] = binc
+ 
+        self.plnt = plnt
+
+
+
+from scipy.interpolate import  RectBivariateSpline
+
+
+
+

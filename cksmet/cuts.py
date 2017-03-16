@@ -136,11 +136,11 @@ class CutDiluted(CutBase):
 
 class CutGrazing(CutBase):
     cuttype = 'grazing'
-    plotstr = '$b$ < 0.7' 
-    texstr = '$b$ < 0.7'
+    plotstr = '$b$ < 0.9' 
+    texstr = '$b$ < 0.9'
     def cut(self):
         if self.sample=='cks':
-            return self.df['koi_impact'] > 0.7 
+            return self.df['koi_impact'] > 0.9 
         elif self.sample=='field':
             return self.allpass()
 
