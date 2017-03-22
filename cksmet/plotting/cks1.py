@@ -21,6 +21,24 @@ def add_anchored(*args,**kwargs):
     at = AnchoredText(*args,**kwargs)
     ax.add_artist(at)
 
+
+def flicker():
+    df = cksmet.io.load_table('cks+bast14')
+    cksmet.plotting.cks1.comparison('slogg',df.cks_slogg,df.bast_slogg,'B14')
+    pdffn = 'paper/fig_cks-bastien14-logg.pdf'
+    print "saving {}".format(pdffn)
+    gcf().savefig(pdffn)
+
+    figure()
+    pdffn = 'paper/fig_cks-bastien14-logg-kepmag.pdf'
+    plot(df.koi_kepmag,df.bast_slogg-df.cks_slogg,'.')
+    ylabel('$\Delta$ logg [CKS]')
+    xlabel('Kepmag')
+
+    print "saving {}".format(pdffn)
+    gcf().savefig(pdffn)
+
+
 def comparison(key,x1,x2,label1='CKS',label2='Comp',fig0=None, axL0=None):
     if key=='steff':
         x3 = x2 - x1 
@@ -42,13 +60,13 @@ def comparison(key,x1,x2,label1='CKS',label2='Comp',fig0=None, axL0=None):
         x3 = x2 - x1 
         fig, axL = subplots_compare(x1, x2, x3, fig0=fig0,axL0=axL0,**errorbar_kw)
         sca(axL[0])
-        ylabel('logg [{}] (K)'.format(label2))
+        ylabel('logg [{}] (dex)'.format(label2))
         xlim(3.5,5.0)
         ylim(3.5,5.0)
         one2one()
 
         sca(axL[1])
-        xlabel('logg [{}] (K)'.format(label1))
+        xlabel('logg [{}] (dex)'.format(label1))
         ylabel('{} - {}'.format(label2,label1))
         ylim(-0.5,0.5)
         gca().yaxis.set_major_locator(MaxNLocator(5))
@@ -59,7 +77,6 @@ def comparison(key,x1,x2,label1='CKS',label2='Comp',fig0=None, axL0=None):
     if key=='smet':
         x3 = x2 - x1 
         fig, axL = subplots_compare(x1, x2, x3, fig0=fig0,axL0=axL0,**errorbar_kw)
-
         sca(axL[0])
         ylabel('[Fe/H] [{}] (dex)'.format(label2))
         xlim(-0.6,0.6)

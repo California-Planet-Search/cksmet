@@ -391,6 +391,27 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         br = br.dropna(subset=['id_kic'])
         br['id_kic'] = br.id_kic.astype(int)
         df = pd.merge(br,sm,on='id_kic')
+
+    elif table=='bast16':
+        # Load Bastien flicker table
+        columns = 'id_kic koi_kepmag bast_slogg bast_slogg_err1 bast_slogg_err2 x x x x x x x'.split()
+        df = pd.read_csv('data/bastien16_table3.txt',skiprows=59,sep='\s+',names=columns,skipfooter=3,)
+        df['bast_slogg_err2'] *=-1
+        df = df.convert_objects(convert_numeric=True)
+        #df = df.dropna(subset=['id_kic'])
+        df['id_kic'] = df['id_kic'].astype(int)
+    elif table=='bast14':
+        # Load Bastien flicker table
+        columns = 'id_kic koi_kepmag bast_steff bast_slogg x x x x x x x'.split()
+        df = pd.read_csv('data/bastien14_table1.txt',skiprows=59,sep='\s+',names=columns,skipfooter=3,)
+        df = df.convert_objects(convert_numeric=True)
+        #df = df.dropna(subset=['id_kic'])
+        df['id_kic'] = df['id_kic'].astype(int)
+    elif table=='cks+bast14':
+        cks = load_table('cks')
+        bast = load_table('bast14')
+        bast = bast.drop(['koi_kepmag'],axis=1)
+        df = pd.merge(cks,bast,on='id_kic') 
     else:
         assert False, "table {} not valid table name".format(table)
     return df
