@@ -4,6 +4,8 @@ from astropy import constants as c
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import  RectBivariateSpline
+
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
@@ -448,6 +450,7 @@ class Occurrence(object):
             - impact: planet impact parameter
         nstars (float): number of stars from which our sample was drawn
         comp (Completeness): completeness object
+        grid (Grid object): grid object over which to compute occurrence.
     
     """
     plnt_columns = ['srad','per','prad','smax','impact','mes']
@@ -526,47 +529,4 @@ class Occurrence(object):
 
         ds = xr.merge([self.grid.ds,ds])
         return ds 
-
-    def _label_bins(self, key):
-        """
-        Assign rows to bins
-
-        Given a columnn `key` and `bins` figure out which bin each row
-        belongs to. Also for every row, return the edges and center of the
-        bins.
-
-        Args:
-            df (DataFrame): Must contain `key` as a column
-            key (str): string label of bin
-            bins (array): list of bin edges 
-            spacing (str): linear/log how to calculate bin center
-
-        """
-        sbin_id = '{}_bin_id'.format(key)
-        sbin1 = '{}_bin1'.format(key)
-        sbin2 = '{}_bin2'.format(key)
-        sbinc = '{}_binc'.format(key)
-        plnt = self.plnt
-        for col in [sbin_id, sbin1, sbin2, sbinc]:
-            plnt[col] = None
-
-        bins = self.bins[key]
-        for i in range(len(bins)-1):
-            bin1 = self.bins1[key][i]
-            bin2 = self.bins2[key][i]
-            binc = self.binsc[key][i]
-            idx = plnt[plnt[key].between(bin1,bin2)].index
-            plnt.ix[idx,sbin_id] = i
-            plnt.ix[idx,sbin1] = bin1
-            plnt.ix[idx,sbin2] = bin2
-            plnt.ix[idx,sbinc] = binc
- 
-        self.plnt = plnt
-
-
-
-from scipy.interpolate import  RectBivariateSpline
-
-
-
 
