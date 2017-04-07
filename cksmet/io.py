@@ -1,16 +1,19 @@
+import os
+from collections import Iterable
+
 import pandas as pd
+import numpy as np
+from scipy.io import idl
+from astropy.io import fits 
 from astropy import constants as c 
 from astropy import units as u
-import numpy as np
-from collections import Iterable
-FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
-import os
-import cksphys.io
 from astropy.table import Table
-from astropy.io import fits 
+
 from cpsutils.pdplus import LittleEndian
+import cksphys.io
 import cksmet.cuts
-from scipy.io import idl
+
+FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     """Load tables used in cksphys
@@ -56,7 +59,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = cksphys.io.load_table('nea')
 
     elif table=='hadden-ttv':
-        tablefn = 'data/hadden17/masstable.tex'
+        tablefn = '/Users/petigura/Research/CKS-Metallicity/data/hadden17/masstable.tex'
         with open(tablefn) as f:
             lines = f.readlines()
 
@@ -320,7 +323,11 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = t.to_pandas().rename(columns=namemap)[namemap.values()]
 
         df['id_kic'] = df['id_kic'].astype(int)
+        df.index = df.id_kic
         df = add_prefix(df,'bruntt_')
+        
+
+
     elif table=='bruntt12+cks':
         df = load_table('bruntt12')
         cks = load_table('cks')
@@ -367,7 +374,19 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         idx = df[df.name.str.contains('^KIC')].index
         df.ix[idx,'id_kic'] = df.ix[idx].name.str.slice(start=3).astype(int)
 
-        namemap = {'name':'id_name','id_kic':'id_kic','id_koi':'id_koi','teff':'steff','logg':'slogg','fe':'smet'}
+
+        cal=True
+        if cal:
+            namemap = {
+                'name':'id_name','id_kic':'id_kic','id_koi':'id_koi','teff':'steff','logg':'slogg','fe':'smet',
+                'vsini':'vsini'
+            }      
+        else:
+            namemap = {
+                'name':'id_name','id_kic':'id_kic','id_koi':'id_koi','teff_uncal':'steff','logg_uncal':'slogg','fe_uncal':'smet'
+            }      
+
+
         df = df.rename(columns=namemap)[namemap.values()]
         df = add_prefix(df,'sm_')
         df.index = df.id_name
@@ -383,6 +402,17 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         br = br.dropna(subset=['id_kic'])
         br['id_kic'] = br.id_kic.astype(int)
         df = pd.merge(br,sm,on='id_kic')
+
+        query = 'sm_vsini < 20 and 4700 < sm_steff < 6500'
+        df = df.query(query)
+        print "requiring: {} leaves {} stars".format(query, len(df))
+        
+        '''
+        query = 'id_kic!=7970740' cant tell if it's binary
+        df = df.query(query)
+        print "requiring: {} leaves {} stars".format(query, len(df) )
+        '''
+
     elif table=='sm+platinum':
         br = load_table('bruntt12')
         sm = load_table('sm')
@@ -391,7 +421,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         br = br.dropna(subset=['id_kic'])
         br['id_kic'] = br.id_kic.astype(int)
         df = pd.merge(br,sm,on='id_kic')
-
+        
     elif table=='bast16':
         # Load Bastien flicker table
         columns = 'id_kic koi_kepmag bast_slogg bast_slogg_err1 bast_slogg_err2 x x x x x x x'.split()
@@ -412,10 +442,45 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         bast = load_table('bast14')
         bast = bast.drop(['koi_kepmag'],axis=1)
         df = pd.merge(cks,bast,on='id_kic') 
+    elif table=='huber13':
+        df = pd.read_csv('data/huber13/huber13.csv')
+        namemap = {
+            'kic':'id_kic','koi':'id_koi',
+            'teff':'huber_steff','uteff':'huber_steff_err',
+            'logg':'huber_slogg','ulogg':'huber_slogg_err',
+            'fe':'huber_smet','ufe':'huber_smet_err'}
+        df = df.rename(columns=namemap)
+        df = df[namemap.values()]
+        df.index = df.id_koi
+
+        # see note in thesis
+        query = '~(id_koi==1054 or id_koi==2481)'
+        df = df.query(query)
+        print "requiring: {} leaves {} stars".format(query, len(df))
+        print "Reason: suspect logg values D. Huber priv comm\n"
+
+        # dropping because biggest outlier
+        query = '~(id_koi==281)'
+        df = df.query(query)
+        print "requiring: {} leaves {} stars".format(query, len(df) )
+        print "Reason: logg differs by 0.4 dex\n"
+
+
+    elif table=='cks+huber13':
+        huber = load_table('huber13')
+        cks = load_table('cks')
+        df = pd.merge(huber,cks,on='id_kic')
+        
+    elif table=='sm+huber13':
+        huber = load_table('huber13')
+        sm = load_table('sm')
+        sm = sm[sm.id_name.str.contains('CK')]
+        sm['id_koi'] = sm.id_name.str.slice(start=2,stop=7).astype(int)
+        df = pd.merge(huber,sm,on='id_koi') 
+
     else:
         assert False, "table {} not valid table name".format(table)
     return df
-
 
 def add_prefix(df,prefix,ignore=['id']):
     namemap = {}
