@@ -1,12 +1,15 @@
+from collections import Iterable
+import string
+
 from matplotlib.pylab import *
-import seaborn as sns
+from matplotlib.ticker import FuncFormatter, MaxNLocator
 import pandas as pd
+import seaborn as sns
 
 import cksphys.io
 import cksmet.io
 import cksmet.cuts
-from collections import Iterable
-from matplotlib.ticker import FuncFormatter, MaxNLocator
+from cksmet.plotting.samples import add_anchored
 
 sns.set_style('whitegrid')
 sns.set_color_codes()
@@ -14,10 +17,7 @@ sns.set_color_codes()
 texrp = '\mathregular{R}_\mathregular{P}' 
 texre = '\mathregular{R}_\mathregular{E}' 
 
-
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
-
-from cksmet.plotting.samples import add_anchored
 
 def prad_fe_label():
     # median planet radius error
@@ -120,7 +120,6 @@ def prad_fe_multiplicity():
     semilogx()
     plot(cks.iso_prad,cks.cks_smet,'.')
 
-
 def period_fe():
     """Plot of planet orbital period vs stellar metallicty 
     """
@@ -130,7 +129,6 @@ def period_fe():
     cut = cks.query('nplanets > 5')
     plot(cut.koi_period, cut.cks_smet,'.r')
     #prad_fe_label()
-
 
 def prad_fe_fit():
     cksbin = cksmet.io.load_table('cksbin-fe')
@@ -181,7 +179,6 @@ def prad_fe_fit():
 
     prad_fe_label()
     xlim(0.5,16)
-
 
 def smax_fe4():
     cks = cksmet.io.load_table('cks-cuts')
@@ -554,7 +551,6 @@ def prad_hist_stacked_small(prad_bins=[0.5,1.0,2.0,4.0,8.0,16]):
 
     fig.set_tight_layout(True)
 
-import string
 
 def cuts():
     df =  cksphys.io.load_table(
@@ -616,3 +612,53 @@ def cuts():
             letter,loc=2, frameon=False, 
             prop=dict(size='large', weight='bold')
         )
+
+
+def period_prad_slices(mode='tall'):
+    sns.set_style('whitegrid')
+    yt = [0.5,1,2,4,8,16,32]
+    xt = [0.3,1,3,10,30,100,300]
+    # smet_bins = [-0.6, -0.4, -0.2, 0.0, +0.2, 0.4]
+    # smet_bins = [-0.8, -0.3, 0.4]
+
+    # Provision figure
+    height = 3
+    width = 3.5
+    if mode=='tall':
+        fig,axL = subplots(nrows=nbins,ncols=1,figsize=(width,nbins*height))
+    if mode=='square':
+        smet_bins = [-0.75, -0.45, -0.15, 0.15, 0.45]
+        nrows = 2
+        ncols = 2
+        fig,axL = subplots(
+            nrows=nrows,ncols=ncols,figsize=(ncols*width,nrows*height),
+            sharex=True,sharey=True
+        )
+
+    plnt = cksmet.io.load_table('cks-cuts')
+    plnt = plnt[~plnt.isany]
+    i = 0
+    nbins = len(smet_bins) - 1
+    axL = axL.flatten()
+
+    while True:
+        if i==nbins:
+            break
+        sca(axL[i])
+        loglog()
+        smet1 = smet_bins[i]
+        smet2 = smet_bins[i+1]
+        label = '[Fe/H] = ({:+.2f},{:+.2f})'.format(smet1,smet2)
+        cut = plnt[plnt.cks_smet.between(smet1,smet2)]
+        cut2 = plnt
+        plot(cut2.koi_period,cut2.iso_prad,'o',label='',color='LightGray',ms=3)
+        plot(cut.koi_period,cut.iso_prad,'o',label=label,mec='Blue',ms=3)
+        legend(frameon=False,markerscale=0)
+        yticks(yt,yt)
+        xticks(xt,xt)
+        i+=1
+
+    xlim(0.1,1000)
+    ylim(0.25,64)
+    fig.set_tight_layout(True)
+    #fig.savefig('paper/fig_')

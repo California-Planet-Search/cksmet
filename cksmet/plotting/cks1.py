@@ -21,10 +21,9 @@ def add_anchored(*args,**kwargs):
     at = AnchoredText(*args,**kwargs)
     ax.add_artist(at)
 
-
 def flicker():
     df = cksmet.io.load_table('cks+bast14')
-    cksmet.plotting.cks1.comparison('slogg',df.cks_slogg,df.bast_slogg,'B14')
+    comparison('slogg',df.cks_slogg,df.bast_slogg,label1='CKS',label2='Ba14')
     pdffn = 'paper/fig_cks-bastien14-logg.pdf'
     print "saving {}".format(pdffn)
     gcf().savefig(pdffn)
@@ -32,8 +31,10 @@ def flicker():
     figure()
     pdffn = 'paper/fig_cks-bastien14-logg-kepmag.pdf'
     plot(df.koi_kepmag,df.bast_slogg-df.cks_slogg,'.')
-    ylabel('$\Delta$ logg [CKS]')
+    ylabel('$\Delta$ logg [Ba14 - CKS]')
     xlabel('Kepmag')
+    axhline(0)
+    grid()
 
     print "saving {}".format(pdffn)
     gcf().savefig(pdffn)
@@ -130,7 +131,7 @@ def comparison_three(table):
         slogg2 = df.spc_slogg
         smet1 = df.cks_smet
         smet2 = df.spc_smet
-        kw = dict(label1='CKS',label2='B14',fig0=fig)
+        kw = dict(label1='CKS',label2='Bu14',fig0=fig)
         comparison('steff',steff1,steff2, axL0=[ax1,ax2],**kw)
         comparison('slogg',slogg1,slogg2, axL0=[ax3,ax4],**kw)
         comparison('smet',smet1,smet2, axL0=[ax5,ax6],**kw)
@@ -240,10 +241,41 @@ def comparison_three(table):
         comparison('slogg',slogg1,slogg2, axL0=[ax3,ax4],**kw)
         comparison('smet',smet1,smet2, axL0=[ax5,ax6],**kw)
 
+    if table=='cks-huber13':
+        df = cksmet.io.load_table('cks+huber13')
+        df = df.groupby('id_kic',as_index=False).last()
+        steff1 = df.cks_steff
+        steff2 = df.huber_steff
+        slogg1 = df.cks_slogg
+        slogg2 = df.huber_slogg
+        smet1 = df.cks_smet
+        smet2 = df.huber_smet
+
+        kw = dict(label1='CKS',label2='H13',fig0=fig)
+        comparison('steff',steff1,steff2, axL0=[ax1,ax2],**kw)
+        comparison('slogg',slogg1,slogg2, axL0=[ax3,ax4],**kw)
+        comparison('smet',smet1,smet2, axL0=[ax5,ax6],**kw)
+
+    if table=='sm-huber13':
+        df = cksmet.io.load_table('sm+huber13')
+        df = df.groupby('id_koi',as_index=False).first()
+        steff1 = df.sm_steff
+        steff2 = df.huber_steff
+        slogg1 = df.sm_slogg
+        slogg2 = df.huber_slogg
+        smet1 = df.sm_smet
+        smet2 = df.huber_smet
+
+        kw = dict(label1='SM',label2='H13',fig0=fig)
+        comparison('steff',steff1,steff2, axL0=[ax1,ax2],**kw)
+        comparison('slogg',slogg1,slogg2, axL0=[ax3,ax4],**kw)
+        comparison('smet',smet1,smet2, axL0=[ax5,ax6],**kw)
+
     fig.set_tight_layout(True)
     
 def cks_comparisons():
     plotnames = [
+        'cks-huber13',
         'sm-bruntt12',
         'cks-endl16',
         'cks-bruntt12',
