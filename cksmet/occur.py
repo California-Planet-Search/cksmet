@@ -5,39 +5,14 @@ import pandas as pd
 import xarray as xr
 from scipy.interpolate import RegularGridInterpolator
 from scipy.interpolate import  RectBivariateSpline
+from scipy.stats import binom
+from scipy.interpolate import interp1d
+from matplotlib.pylab import * 
+from scipy.optimize import newton
 
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
-
-per_bins_dict = {
-    'xfine': [
-        1.  ,    1.19,    1.41,    1.68,    2.  ,    2.38,    2.83,
-        3.36,    4.  ,    4.76,    5.66,    6.73,    8.  ,    9.51,
-        11.31,   13.45,   16.  ,   19.03,   22.63,   26.91,   32.  ,
-        38.05,   45.25,   53.82,   64.  ,   76.11,   90.51,  107.63,
-        128.  ,  152.22,  181.02,  215.27,  256.  
-    ],
-    'fine': [ 
-        1.00, 1.41, 2.00,  2.83,  4.00, 5.66, 8.00,  
-        11.3, 16., 22.6, 32.0, 45.3, 64.0, 90.5, 128., 
-        181,  256 ],
-    'coarse': [ 
-        1.00, 2.00,  4.00, 8.00,  
-        16., 32.0, 64.0, 128., 256 ],
-}    
-
-prad_bins_dict = {
-    'xfine': np.round(np.logspace(np.log10(0.5),np.log10(32),49 ),2),
-    'fine': np.round(np.logspace(np.log10(0.5),np.log10(32),25 ),2),
-    'coarse': [ 
-         0.5,  0.71, 1.00, 1.41, 2.0, 2.83, 4.00, 5.66, 8.0, 11.31, 16.0
-    ]
-}
-
-smet_bins_dict = {
-    'fine': np.arange(-0.8,0.6001,0.2)
-}
 
 
 def _sbins_to_sbins_id(sbins):
@@ -450,10 +425,10 @@ class Occurrence(object):
             - impact: planet impact parameter
         nstars (float): number of stars from which our sample was drawn
         comp (Completeness): completeness object
-        grid (Grid object): grid object over which to compute occurrence.
     
     """
     plnt_columns = ['srad','per','prad','smax','impact','mes']
+
     def __init__(self, plnt, nstars, comp, grid):
         for col in self.plnt_columns:
             assert list(plnt).count(col)==1, \
@@ -461,7 +436,9 @@ class Occurrence(object):
 
         idxdrop = plnt[plnt.impact > comp.impact_transit].index
         ndrop = len(idxdrop)
-        print "dropping {} planets, impact > {}".format(ndrop,comp.impact_transit)
+        print "dropping {} planets, impact > {}".format(
+            ndrop, comp.impact_transit
+        )
 
         plnt = plnt.drop(idxdrop)
         if comp.prob_det_mes_name.count('step')==1:
@@ -476,7 +453,31 @@ class Occurrence(object):
         self.plnt = plnt
         self.nstars = nstars
         self.comp = comp
-        self.grid = grid
+
+    def set_grid_ntrials(self, grid):
+        """
+        Compute number of effective trials in little boxes in
+        period-radius space
+
+        Args:
+            grid (Grid object): grid small compared to variability in 
+               completeness
+        """
+
+        # Convert to dataframe so we can loop over
+        df = grid.ds.to_dataframe()
+        for i, row in df.iterrows():
+            prob_det = self.comp.prob_det(row.perc,row.pradc,method='direct')
+            prob_tr = self.comp.prob_tr(row.perc)
+            df.ix[i,'prob_det'] = prob_det
+            df.ix[i,'prob_tr'] = prob_tr
+            
+        df['ntrials'] = self.nstars * df['prob_det'] * df['prob_tr']
+        grid.ds = df.to_xarray()
+        self.grid_ntrials = grid
+
+
+
 
     def compute_occurrence(self):
         """Compute occurrence over grid
@@ -530,3 +531,227 @@ class Occurrence(object):
         ds = xr.merge([self.grid.ds,ds])
         return ds 
 
+    def compute_occurrence_errors(self):
+        """
+        Compute occurrence with errors
+        
+        Look for planets in each bin. If they exist, compute 1000 samples of the pdf
+        """
+        # check that a/Rstar does not change by more than 10% over a bin
+        # check that prob_detectr does not change by more than 10% over a bin
+
+        # Compute agg quantities in bins
+        prob_tr_const_thresh = 0.2 # 
+        prob_det_const_thresh = 0.2 # 
+
+        labels = []
+        for sbin in self.grid.bins.keys():
+            labels+=[pd.cut(self.plnt[sbin],self.grid.bins[sbin])]
+
+        g = self.plnt.groupby(labels,as_index=True)
+        df = g[['id_starname']].count()
+        ds = df.to_xarray()
+        for sbin in self.grid.bins.keys():
+            ds.coords[sbin] = self.grid.binsc[sbin]
+
+        ds = xr.merge([self.grid.ds,ds])
+        df = ds.to_dataframe()
+        df['is_prob_tr_const'] = 0
+        df['is_prob_det_const'] = 0
+        df['prob_tr_lo'] = 0
+        df['prob_tr_hi'] = 0
+
+        for i, row in df.iterrows():
+            # Difference in transit prob
+            prob_tr_hi = self.comp.prob_tr(row.per1)
+            prob_tr_lo = self.comp.prob_tr(row.per2)
+            df.ix[i,'prob_tr_lo'] = prob_tr_lo
+            df.ix[i,'prob_tr_hi'] = prob_tr_hi
+            
+            # Difference in completeness
+            prob_det_hi = self.comp.prob_det(row.per1,row.prad2,method='direct')
+            prob_det_lo = self.comp.prob_det(row.per2,row.prad1,method='direct')
+            df.ix[i,'prob_det_lo'] = prob_det_lo
+            df.ix[i,'prob_det_hi'] = prob_det_hi
+
+            ratio = prob_tr_hi/prob_tr_lo
+            if np.abs(ratio-1) < prob_tr_const_thresh:
+                df.ix[i,'is_prob_tr_const'] = 1
+
+            ratio = prob_det_hi/prob_det_lo
+            # print row.per1, row.prad2, row.per2, row.prad1, prob_det_hi, prob_det_lo
+            if np.abs(ratio-1) < prob_det_const_thresh:
+                df.ix[i,'is_prob_det_const'] = 1
+
+        pdfL = []
+        rateL = []
+        df['rate_ul'] = -1
+        df['prob_det'] = -1
+        df['rate_prob_tr'] = -1
+        for i, row in df.iterrows():
+            cut = self.plnt[
+                self.plnt.prad.between(row.prad1,row.prad2) & 
+                self.plnt.per.between(row.per1,row.per2)
+            ]
+            nplanets = len(cut)
+            nstars = round(self.nstars)
+
+            prob_tr = self.comp.prob_tr(row.perc)
+            prob_det = self.comp.prob_det(row.perc,row.pradc,method='interp')
+            ntrials = np.round(self.nstars * prob_det)
+            df.ix[i,'ntrials'] = ntrials
+            df.ix[i,'nstars'] = nstars
+            df.ix[i,'nplanets'] = nplanets
+            df.ix[i,'prob_det'] = prob_det
+            df.ix[i,'prob_tr'] = prob_tr
+
+            if nplanets!=0:
+                # Detection, calculate pdf of the rate of planets in box
+                rate_tr_best = nplanets / ntrials
+                rate_tr = np.linspace(0,10 * rate_tr_best,1000)
+                pdf = [binom.pmf(nplanets, ntrials, r) for r in rate_tr]
+                rate = rate_tr / prob_tr
+                pdf /= np.sum(pdf)
+            else:
+                # Non-detection, calculate 95% upper limit on rate.
+                obj = lambda rate : binom.pmf(0, ntrials, rate) - 0.05
+                rate_tr = newton(obj,0)
+                rate = rate_tr / prob_tr
+                df.ix[i,'rate_ul'] = rate
+                pdf = []
+                rate = []
+
+            pdfL.append(pdf)
+            rateL.append(rate)
+
+        df['pdf'] = pdfL
+        df['rate'] = rateL
+        return df
+
+def combine_cells(df,plot_diag=False):
+    """
+    Combine cells
+
+    Each cell contains either an upper limit, or a PDF of the rate. We
+    either sum up all the rate PDFs (using convolution), or we take
+    the maximum upper limit as the total upper limit.
+
+    """
+
+    # Figure out how much to interpolate
+    idx =  df[df.nplanets>0].index
+
+    out = {'rate_ul':None,'rate':None,'rate_err1':None,'rate_err2':None}
+    if len(idx)==0:
+        out['rate_ul'] = df['rate_ul'].max()
+        return out
+
+    rate2d = np.vstack(df.ix[idx,'rate'].values)
+    pdf2d = np.vstack(df.ix[idx,'pdf'].values)
+    rateistep = np.min(rate2d[:,1:] - rate2d[:,:-1])
+    rateimax = np.max(rate2d)
+    ratei = np.arange(0,rateimax,rateistep)
+
+    # resample the rate onto a constant scale
+    pdfi2d = []
+    for i in range(pdf2d.shape[0]):
+        rate = rate2d[i]
+        pdf = pdf2d[i]
+        interp = interp1d(rate, pdf, fill_value=0, bounds_error=False)
+        pdfi = interp(ratei)
+        pdfi2d.append(pdfi)
+
+    pdfconv = reduce(np.convolve,pdfi2d)
+    pdfconv /= np.sum(pdfconv)
+    rateiconv = arange(len(pdfconv))*rateistep
+
+    cdfconv = np.cumsum(pdfconv)
+    ppf = interp1d(cdfconv,rateiconv)
+
+    ratelo,ratemi,ratehi = ppf([.16,.500,0.84])
+    rate_err1 = ratehi-ratemi
+    rate_err2 = ratelo-ratemi
+
+    rates = np.array([ratemi,rate_err1,rate_err2]) * 100
+    print "{0:.3f} +/- {1:.3f} {2:.3f} %".format(*rates)
+
+    if plot_diag:
+        fig,axL = subplots(nrows=2,sharex=True)
+        sca(axL[0])
+        plot(rate2d.T,pdf2d.T,'k')
+        plot(ratei,np.vstack(pdfi2d).T,'b')
+        sca(axL[1])
+        plot(rateiconv,pdfconv,'r')
+        x = [ratemi]
+        y = [1.1*max(pdfconv)]
+        xerr = [[-rate_err2],[rate_err1]]
+        errorbar(x, y, xerr=xerr, fmt='o')
+
+    out['rate'] = ratemi
+    out['rate_err1'] = rate_err1
+    out['rate_err2'] = rate_err2
+    return out
+
+def combine_cells2(df,plot_diag=False):
+    """
+    Combine cells
+
+    Each cell contains either an upper limit, or a PDF of the rate. We
+    either sum up all the rate PDFs (using convolution), or we take
+    the maximum upper limit as the total upper limit.
+
+    """
+
+    # Figure out how much to interpolate
+    idx =  df[df.nplanets>0].index
+
+    out = {'rate_ul':None,'rate':None,'rate_err1':None,'rate_err2':None}
+    if len(idx)==0:
+        out['rate_ul'] = df['rate_ul'].max()
+        return out
+
+    rate2d = np.vstack(df.ix[idx,'rate'].values)
+    pdf2d = np.vstack(df.ix[idx,'pdf'].values)
+    rateistep = np.min(rate2d[:,1:] - rate2d[:,:-1])
+    rateimax = np.max(rate2d)
+    ratei = np.arange(0,rateimax,rateistep)
+
+    # resample the rate onto a constant scale
+    pdfi2d = []
+    for i in range(pdf2d.shape[0]):
+        rate = rate2d[i]
+        pdf = pdf2d[i]
+        interp = interp1d(rate, pdf, fill_value=0, bounds_error=False)
+        pdfi = interp(ratei)
+        pdfi2d.append(pdfi)
+
+    pdfconv = reduce(np.convolve,pdfi2d)
+    pdfconv /= np.sum(pdfconv)
+    rateiconv = arange(len(pdfconv))*rateistep
+
+    cdfconv = np.cumsum(pdfconv)
+    ppf = interp1d(cdfconv,rateiconv)
+
+    ratelo,ratemi,ratehi = ppf([.16,.500,0.84])
+    rate_err1 = ratehi-ratemi
+    rate_err2 = ratelo-ratemi
+
+    rates = np.array([ratemi,rate_err1,rate_err2]) * 100
+    print "{0:.3f} +/- {1:.3f} {2:.3f} %".format(*rates)
+
+    if plot_diag:
+        fig,axL = subplots(nrows=2,sharex=True)
+        sca(axL[0])
+        plot(rate2d.T,pdf2d.T,'k')
+        plot(ratei,np.vstack(pdfi2d).T,'b')
+        sca(axL[1])
+        plot(rateiconv,pdfconv,'r')
+        x = [ratemi]
+        y = [1.1*max(pdfconv)]
+        xerr = [[-rate_err2],[rate_err1]]
+        errorbar(x, y, xerr=xerr, fmt='o')
+
+    out['rate'] = ratemi
+    out['rate_err1'] = rate_err1
+    out['rate_err2'] = rate_err2
+    return out
