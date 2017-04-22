@@ -3,93 +3,19 @@ from astropy import units as u
 from astropy import constants as c
 import pandas as pd
 import xarray as xr
-from scipy.interpolate import RegularGridInterpolator
-from scipy.interpolate import  RectBivariateSpline
+
+from scipy.interpolate import (
+    RegularGridInterpolator, RectBivariateSpline, interp1d
+)
 from scipy.stats import binom
-from scipy.interpolate import interp1d
-from matplotlib.pylab import * 
 from scipy.optimize import newton
+from matplotlib.pylab import * 
+
+import cksmet.grid
 
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
-
-
-def _sbins_to_sbins_id(sbins):
-    """Convenience function for converting bin names to bins_id names"""
-    return ['{}_bin_id'.format(sbin) for sbin in sbins]
-
-class Grid(object):
-    """
-    Grid
-
-    This object creates grids used to compute occurrence and completeness
-    """
-
-    def __init__(self, bins_dict, spacing_dict):
-        """Lay down grid for computing occurrence
-        
-        Args:
-            bins_dict (dict): Dictionary of lists defining bins. e.g.:
-                {'per': [5,10,20], 'prad': [1,2,4], 'smet': [-0.4,0.0,0.4]}
-            spacing_dict (dict): Specify linear or log spacing e.g.:
-                {'per': 'log', 'prad': 'log', 'smet': 'linear'}
-        
-        """
-
-        assert bins_dict.keys()==spacing_dict.keys()
-        self.bins = bins_dict
-        self.spacing = spacing_dict
-
-        # For every bin, record the lower, upper, and central value
-        self.bins1 = {}
-        self.bins2 = {}
-        self.binsc = {}
-        self.nbins = {}
-
-        for key in self.bins.keys():
-            self._add_bin_edges(key)
-            self.nbins[key] = len(self.bins1[key])
-
-
-        ds = xr.Dataset(coords=self.binsc)
-        for sbin in self.bins.keys():
-            ds.coords[sbin] = self.binsc[sbin]
-
-        for key in self.bins.keys():
-            coord = {key: self.binsc[key]}
-            ds[key+'c'] = xr.DataArray(self.binsc[key],coord)
-            ds[key+'1'] = xr.DataArray(self.bins1[key],coord)
-            ds[key+'2'] = xr.DataArray(self.bins2[key],coord)
-
-        # This line makes all data variables 2D
-        ds = ds.to_dataframe().to_xarray()
-        self.ds = ds
-
-    def _add_bin_edges(self, key):
-        """Computes bin edges and centers for the specified bins"""
-        bins = self.bins[key]
-        spacing = self.spacing[key]
-
-        bins1 = []
-        bins2 = []
-        binsc = []
-        for i in range(len(bins)-1):
-            bin1 = bins[i]
-            bin2 = bins[i+1]
-            if spacing=='linear':
-                binc = 0.5 * (bin1 + bin2)
-            elif spacing=='log':
-                binc = np.sqrt(bin1 * bin2)
-            else:
-                False, "Invalid spacing"
-            bins1+=[bin1]
-            bins2+=[bin2]
-            binsc+=[binc]
-        
-        self.bins1[key] = bins1
-        self.bins2[key] = bins2
-        self.binsc[key] = binsc
 
 class Completeness(object):
     """
@@ -440,6 +366,7 @@ class Occurrence(object):
             ndrop, comp.impact_transit
         )
 
+        self.plnt0 = plnt.copy() 
         plnt = plnt.drop(idxdrop)
         if comp.prob_det_mes_name.count('step')==1:
             min_mes = comp.prob_det_mes_name.split('-')[1]
@@ -454,7 +381,7 @@ class Occurrence(object):
         self.nstars = nstars
         self.comp = comp
 
-    def set_grid_ntrials(self, grid):
+    def set_grid_fine(self, grid):
         """
         Compute number of effective trials in little boxes in
         period-radius space
@@ -474,10 +401,63 @@ class Occurrence(object):
             
         df['ntrials'] = self.nstars * df['prob_det'] * df['prob_tr']
         grid.ds = df.to_xarray()
-        self.grid_ntrials = grid
+        self.grid_fine = grid
+    
+    def set_grid_loguni(self, downsamp):
+        """
+        Compute occurrence in bins, with the assumption that planet occurence (not the sensitivity) is log uniform over the box. 
+
+        Args:
+            downsamp (dict): Amount by which to down sample the finer grid
+        """
+
+        # Create the downsampled grid
+        bins_dict = []
+        for key, _downsamp in downsamp.iteritems():
+            bins = self.grid_fine.bins[key][::_downsamp]
+            bins_dict.append( (key,bins))
+        bins_dict = dict(bins_dict)
+        grid_loguni = cksmet.grid.Grid(bins_dict, self.grid_fine.spacing)
+
+        df_fine = self.grid_fine.ds.to_dataframe()
+        df_loguni = grid_loguni.ds.to_dataframe()
+        df_loguni['fine'] = -1
+        df_loguni['nplanets'] = -1
+        df_loguni['prob_det_min'] = -1
+        df_loguni['prob_det_max'] = -1
 
 
+        for i, row in df_loguni.iterrows():
+            idx_fine = df_fine[
+                df_fine.perc.between(row.per1,row.per2) &
+                df_fine.pradc.between(row.prad1,row.prad2) 
+            ].index 
 
+            _df_fine = df_fine.ix[idx_fine]
+            ntrials =  _df_fine['ntrials'].mean()
+            df_loguni.ix[i,'ntrials'] = ntrials
+            df_loguni.ix[i,'prob_det_min'] = _df_fine['prob_det'].min()
+            df_loguni.ix[i,'prob_det_max'] = _df_fine['prob_det'].max()
+            
+            idx_plnt = self.plnt[
+                self.plnt.per.between(row.per1,row.per2) &
+                self.plnt.prad.between(row.prad1,row.prad2) 
+            ].index
+
+            nplanets = len(self.plnt.ix[idx_plnt])
+            df_loguni.ix[i,'nplanets'] = nplanets
+
+            rate, rate_err1, rate_err2, rate_ul, _ = binomial_rate(
+                ntrials,nplanets
+            )
+
+            df_loguni.ix[i,'rate'] = rate
+            df_loguni.ix[i,'rate_err1'] = rate_err1
+            df_loguni.ix[i,'rate_err2'] = rate_err2
+            df_loguni.ix[i,'rate_ul'] = rate_ul
+    
+        self.grid_loguni = grid_loguni
+        self.grid_loguni.ds = df_loguni.to_xarray()
 
     def compute_occurrence(self):
         """Compute occurrence over grid
@@ -543,6 +523,7 @@ class Occurrence(object):
         # Compute agg quantities in bins
         prob_tr_const_thresh = 0.2 # 
         prob_det_const_thresh = 0.2 # 
+        upper_limit = 0.95 # Upper limits correspond to this level of conf.
 
         labels = []
         for sbin in self.grid.bins.keys():
@@ -608,13 +589,14 @@ class Occurrence(object):
             if nplanets!=0:
                 # Detection, calculate pdf of the rate of planets in box
                 rate_tr_best = nplanets / ntrials
-                rate_tr = np.linspace(0,10 * rate_tr_best,1000)
+                rate_tr = np.linspace(0,10 * rate_tr_best, 1000)
                 pdf = [binom.pmf(nplanets, ntrials, r) for r in rate_tr]
                 rate = rate_tr / prob_tr
                 pdf /= np.sum(pdf)
             else:
                 # Non-detection, calculate 95% upper limit on rate.
-                obj = lambda rate : binom.pmf(0, ntrials, rate) - 0.05
+                root = 1 - upper_limit
+                obj = lambda rate : binom.pmf(0, ntrials, rate) - root
                 rate_tr = newton(obj,0)
                 rate = rate_tr / prob_tr
                 df.ix[i,'rate_ul'] = rate
@@ -628,29 +610,101 @@ class Occurrence(object):
         df['rate'] = rateL
         return df
 
-def combine_cells(df,plot_diag=False):
+def binomial_rate(ntrials, nsuccess):
+    """
+    Compute the rate and expected value of binomial distribution
+
+    Args:
+        ntrials (float): number of trials
+        nsuccess (float): number of sucesses
+    """
+    ntrials = float(ntrials)
+    nsuccess = float(nsuccess)
+    rate_ul = None
+    rate = None
+    rate_err1 = None
+    rate_err2 = None
+    stats = None
+    if ntrials<1:
+        pass 
+    elif nsuccess!=0:
+        # Detection, calculate pdf of the rate of planets in box
+        rate = nsuccess / ntrials
+        maxrate = min(1,10*rate)
+        ratei = np.linspace(0, maxrate, 1000)
+        pdf = np.array([binom.pmf(nsuccess, ntrials, r) for r in ratei])
+        pdf /= np.sum(pdf)
+        stats = pd.DataFrame(dict(ratei=ratei,pdf=pdf))
+        rate, rate_err1, rate_err2  = credible_interval(stats, rate)
+    else:
+        # Non-detection, calculate 95% upper limit on rate.
+        obj = lambda rate : binom.pmf(0, ntrials, rate) - 0.05
+        rate_ul = newton(obj,1e-4,maxiter=100)
+
+    return rate, rate_err1, rate_err2, rate_ul, stats
+
+
+def credible_interval(stats, rate):
+    """
+    Measure the narrowest region surrounding the mode containing 0.683 of the 
+    PDF
+    """
+    
+    assert np.allclose(stats.pdf.sum(),1.0), "Must normalize PDF"
+    
+    stats['dmode'] = np.abs(stats['ratei'] - rate)
+    stats = stats.sort_values(by='dmode')
+    idx_cred = stats[stats.pdf.cumsum() < 0.683].index
+    ratelo = stats.ix[idx_cred].ratei.min()
+    ratehi = stats.ix[idx_cred].ratei.max()
+    rate_err1 = ratehi-rate
+    rate_err2 = ratelo-rate
+    return rate, rate_err1, rate_err2 
+
+def combine_cells(df, plot_diag=False):
     """
     Combine cells
 
-    Each cell contains either an upper limit, or a PDF of the rate. We
-    either sum up all the rate PDFs (using convolution), or we take
-    the maximum upper limit as the total upper limit.
+    For a given set of cells, combine the occurrence rates using a
+    convolution of the PDFs from the binomial distribution.
+
+    If there are no detections, compute an upper limit on the
+    occurrence rate by assuming that planet occurrence is constant in
+    logP logRp over the summed box.
 
     """
-
     # Figure out how much to interpolate
+    df = df.copy()
+    nplanets = df.nplanets.sum()
+    out = {'rate_ul':None,'rate':None,'rate_err1':None,'rate_err2':None,'ntrials':None}
+    if nplanets==0:
+        ntrials = df.ntrials.mean()
+        out['ntrials'] = ntrials
+        _, _, _, rate_ul, stats = binomial_rate(ntrials, nplanets)
+        out['rate_ul'] = rate_ul
+        return out
+        
+    # Compute combined occurrence by performing a convolution of the pdfs
     idx =  df[df.nplanets>0].index
 
-    out = {'rate_ul':None,'rate':None,'rate_err1':None,'rate_err2':None}
-    if len(idx)==0:
-        out['rate_ul'] = df['rate_ul'].max()
-        return out
+    df = df.ix[idx]
+    rateL = [] 
+    pdfL = []
+    ntrialsL = []
+    for i, row in df.ix[idx].iterrows():
+        _, _, _, _, stats = binomial_rate(row.ntrials, row.nplanets)
+        stats = stats.sort_values(by='ratei')
+        rateL.append(np.array(stats.ratei))
+        pdfL.append(np.array(stats.pdf))
+        ntrialsL.append(row.ntrials) 
 
-    rate2d = np.vstack(df.ix[idx,'rate'].values)
-    pdf2d = np.vstack(df.ix[idx,'pdf'].values)
+    out['ntrials'] = np.mean(ntrialsL)
+
+    rate2d = np.vstack(rateL)
+    pdf2d = np.vstack(pdfL)
     rateistep = np.min(rate2d[:,1:] - rate2d[:,:-1])
     rateimax = np.max(rate2d)
-    ratei = np.arange(0,rateimax,rateistep)
+    ratei = np.arange(0, rateimax, rateistep)
 
     # resample the rate onto a constant scale
     pdfi2d = []
@@ -665,15 +719,9 @@ def combine_cells(df,plot_diag=False):
     pdfconv /= np.sum(pdfconv)
     rateiconv = arange(len(pdfconv))*rateistep
 
-    cdfconv = np.cumsum(pdfconv)
-    ppf = interp1d(cdfconv,rateiconv)
-
-    ratelo,ratemi,ratehi = ppf([.16,.500,0.84])
-    rate_err1 = ratehi-ratemi
-    rate_err2 = ratelo-ratemi
-
-    rates = np.array([ratemi,rate_err1,rate_err2]) * 100
-    print "{0:.3f} +/- {1:.3f} {2:.3f} %".format(*rates)
+    stats = pd.DataFrame(dict(ratei=rateiconv,pdf=pdfconv))
+    rate = stats.sort_values(by='pdf').iloc[-1].ratei
+    rate, rate_err1, rate_err2 = credible_interval(stats, rate)
 
     if plot_diag:
         fig,axL = subplots(nrows=2,sharex=True)
@@ -682,76 +730,16 @@ def combine_cells(df,plot_diag=False):
         plot(ratei,np.vstack(pdfi2d).T,'b')
         sca(axL[1])
         plot(rateiconv,pdfconv,'r')
-        x = [ratemi]
+        x = [rate]
         y = [1.1*max(pdfconv)]
         xerr = [[-rate_err2],[rate_err1]]
+        
         errorbar(x, y, xerr=xerr, fmt='o')
+        xlim(0,rate+rate_err1*1.5)
 
-    out['rate'] = ratemi
+    out['rate'] = rate
     out['rate_err1'] = rate_err1
     out['rate_err2'] = rate_err2
     return out
 
-def combine_cells2(df,plot_diag=False):
-    """
-    Combine cells
 
-    Each cell contains either an upper limit, or a PDF of the rate. We
-    either sum up all the rate PDFs (using convolution), or we take
-    the maximum upper limit as the total upper limit.
-
-    """
-
-    # Figure out how much to interpolate
-    idx =  df[df.nplanets>0].index
-
-    out = {'rate_ul':None,'rate':None,'rate_err1':None,'rate_err2':None}
-    if len(idx)==0:
-        out['rate_ul'] = df['rate_ul'].max()
-        return out
-
-    rate2d = np.vstack(df.ix[idx,'rate'].values)
-    pdf2d = np.vstack(df.ix[idx,'pdf'].values)
-    rateistep = np.min(rate2d[:,1:] - rate2d[:,:-1])
-    rateimax = np.max(rate2d)
-    ratei = np.arange(0,rateimax,rateistep)
-
-    # resample the rate onto a constant scale
-    pdfi2d = []
-    for i in range(pdf2d.shape[0]):
-        rate = rate2d[i]
-        pdf = pdf2d[i]
-        interp = interp1d(rate, pdf, fill_value=0, bounds_error=False)
-        pdfi = interp(ratei)
-        pdfi2d.append(pdfi)
-
-    pdfconv = reduce(np.convolve,pdfi2d)
-    pdfconv /= np.sum(pdfconv)
-    rateiconv = arange(len(pdfconv))*rateistep
-
-    cdfconv = np.cumsum(pdfconv)
-    ppf = interp1d(cdfconv,rateiconv)
-
-    ratelo,ratemi,ratehi = ppf([.16,.500,0.84])
-    rate_err1 = ratehi-ratemi
-    rate_err2 = ratelo-ratemi
-
-    rates = np.array([ratemi,rate_err1,rate_err2]) * 100
-    print "{0:.3f} +/- {1:.3f} {2:.3f} %".format(*rates)
-
-    if plot_diag:
-        fig,axL = subplots(nrows=2,sharex=True)
-        sca(axL[0])
-        plot(rate2d.T,pdf2d.T,'k')
-        plot(ratei,np.vstack(pdfi2d).T,'b')
-        sca(axL[1])
-        plot(rateiconv,pdfconv,'r')
-        x = [ratemi]
-        y = [1.1*max(pdfconv)]
-        xerr = [[-rate_err2],[rate_err1]]
-        errorbar(x, y, xerr=xerr, fmt='o')
-
-    out['rate'] = ratemi
-    out['rate_err1'] = rate_err1
-    out['rate_err2'] = rate_err2
-    return out

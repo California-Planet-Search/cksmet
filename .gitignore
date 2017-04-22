@@ -1,2 +1,6 @@
 *.pyc
 data/
+*.pdf
+*.png
+*.ipynb
+*.pkl
