@@ -13,6 +13,8 @@ from cpsutils.pdplus import LittleEndian
 import cksphys.io
 import cksmet.cuts
 
+DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
+
 FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
@@ -315,10 +317,10 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = cksmet.cuts.add_cuts(df, cuttypes, 'field')
 
     elif table=='bruntt12':
-        t = Table.read(
-            'data/bruntt12/table3.dat',
-            readme='data/bruntt12/ReadMe',format='ascii.cds'
-        )
+        fn = os.path.join(DATADIR,'bruntt12/table3.dat')
+        readme = os.path.join(DATADIR,'bruntt12/ReadMe')
+
+        t = Table.read(fn,readme=readme,format='ascii.cds')
         namemap={'KIC':'id_kic','Teff':'steff','logg':'slogg','[Fe/H]':'smet'}
         df = t.to_pandas().rename(columns=namemap)[namemap.values()]
 
@@ -443,7 +445,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         bast = bast.drop(['koi_kepmag'],axis=1)
         df = pd.merge(cks,bast,on='id_kic') 
     elif table=='huber13':
-        df = pd.read_csv('data/huber13/huber13.csv')
+        fn = os.path.join(DATADIR,'huber13/huber13.csv')
+        df = pd.read_csv(fn)
         namemap = {
             'kic':'id_kic','koi':'id_koi',
             'teff':'huber_steff','uteff':'huber_steff_err',
