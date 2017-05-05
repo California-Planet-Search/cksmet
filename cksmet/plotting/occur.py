@@ -8,23 +8,43 @@ import cksmet.occur
 from cksmet.grid import *
 from matplotlib.transforms import blended_transform_factory as btf
 
-def histograms(query):
+
+def load_occur():
     smetbins = [
         [-0.75,-0.45],
         [-0.45,-0.15],
         [-0.15,0.15],
         [0.15,0.45]
     ]
-    ydata_nstars = 0.9
-    ydata_occur = 0.85
-    fig,ax = subplots(figsize=(6,4))
-
+    occL = []
     for i in range(len(smetbins)):
         smetbin = smetbins[i]
         cachefn = cksmet.analysis.cachefn(smetbin)
         occ  = cksmet.analysis.load_occur(
             cache=1, cachefn=cachefn, smetbin=smetbin
         ) 
+        occL.append(occ)
+
+    return smetbins, occL
+
+def histograms(smetbins, occL, query, tworuns=True):
+    if tworuns==True:
+        minrate = histograms(smetbins, occL, query,tworuns=False),
+        yl = list(ylim())
+        yuplim = 0.1 * (yl[1] - yl[0])
+        cla() 
+    else:
+        yuplim=nan
+        fig, ax = subplots(figsize=(6,4))
+
+    ax = gca()
+    ydata_nstars = 0.9
+    ydata_occur = 0.85
+    minrate = 1
+    for i in range(len(smetbins)):
+        smetbin = smetbins[i]
+        occ = occL[i]
+
         cut = occ.grid_loguni.ds.to_dataframe().query(query)
         x = 0.5 * (smetbin[0] + smetbin[1])
         xerr = 0.5 * (smetbin[1] - smetbin[0])
@@ -43,23 +63,26 @@ def histograms(query):
             soccur = "{:.2f} {:+.2f}/{:+.2f}%".format(
                 prate, prate_err1, prate_err2
             )
-            texoccur = "${:.1f}^{{{:+.1f}}}_{{{:+.1f}}}\%$".format(
+            texoccur = "${:.2f}^{{{:+.2f}}}_{{{:+.2f}}}\%$".format(
                 prate, prate_err1, prate_err2
             )
             
             y = [prate]
             yerr = [[-prate_err2],[prate_err1]]
             errorbar([x],[y], xerr=xerr, yerr=yerr,**errkw)
+            minrate = min(minrate,prate)
         else:
             out = cksmet.occur.combine_cells(cut)
             prate_ul = out['rate_ul'] * 100
             soccur = "< {:.2f}%".format(prate_ul)
-            texoccur = "$< {:.1f}\%$".format(prate_ul)
+            texoccur = "$< {:.2f}\%$".format(prate_ul)
 
+            yuplim = min(yuplim,prate_ul)
             errorbar(
-                [x],[prate_ul], xerr=xerr, yerr=[prate_ul], uplims=True, 
+                [x],[prate_ul], xerr=xerr, yerr=[yuplim], uplims=True, 
                 capsize=5,**errkw
             )
+            minrate = min(minrate,prate_ul)
         
         print "{}, {}".format(sferng, soccur)
         print "Mean ntrials {:.1f}".format(out['ntrials'])
@@ -83,6 +106,7 @@ def histograms(query):
     xlim(*xl)
     xlabel('[Fe/H]')
     ylabel('Planets per 100 Stars')
+    return minrate 
 
 def checkerboard(smetbin, print_ul=False):
     cachefn = cksmet.analysis.cachefn(smetbin)
@@ -197,8 +221,6 @@ def checkerboard_ratio(smetbin, print_ul=False):
     annotate_checkerboard_diff(df)
     label_checkerboard()
     return ds0,ds
-
-
 
 def label_checkerboard():
     fig = gcf()

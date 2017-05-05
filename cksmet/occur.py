@@ -3,15 +3,16 @@ from astropy import units as u
 from astropy import constants as c
 import pandas as pd
 import xarray as xr
-
 from scipy.interpolate import (
     RegularGridInterpolator, RectBivariateSpline, interp1d
 )
 from scipy.stats import binom
 from scipy.optimize import newton
 from matplotlib.pylab import * 
-
 import cksmet.grid
+from scipy.special import gammaln as gamln
+from  scipy import special
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
@@ -610,56 +611,86 @@ class Occurrence(object):
         df['rate'] = rateL
         return df
 
-def binomial_rate(ntrials, nsuccess):
+def binom_gamma(p, n, k):
+    """
+    Probability that rate is p given there are n trials and k sucesses
+    """
+    n = 1.0*n
+    k = 1.0*k
+    p = 1.0*p
+    combiln = (gamln(n+1) - (gamln(k+1) + gamln(n - k + 1)))
+    _logpdf = combiln + special.xlogy(k, p) + special.xlog1py(n-k, -p)
+    _pdf = np.exp(_logpdf)
+    return _pdf
+
+def binomial_rate(n, k):
     """
     Compute the rate and expected value of binomial distribution
 
     Args:
-        ntrials (float): number of trials
-        nsuccess (float): number of sucesses
+        n (float): number of trials
+        k (float): number of sucesses
     """
-    ntrials = float(ntrials)
-    nsuccess = float(nsuccess)
+    n = float(n)
+    k = float(k)
     rate_ul = None
     rate = None
     rate_err1 = None
     rate_err2 = None
     stats = None
-    if ntrials<1:
+
+    quantile_uplim = 0.9
+    if n<1:
         pass 
-    elif nsuccess!=0:
+    elif k!=0:
         # Detection, calculate pdf of the rate of planets in box
-        rate = nsuccess / ntrials
+        rate = 1.0 * k / n
         maxrate = min(1,10*rate)
-        ratei = np.linspace(0, maxrate, 1000)
-        pdf = np.array([binom.pmf(nsuccess, ntrials, r) for r in ratei])
-        pdf /= np.sum(pdf)
+        ratei = np.linspace(0, maxrate, 10000)
+        pdf = binom_gamma(ratei,n,k)
+        pdf /= pdf.sum()
         stats = pd.DataFrame(dict(ratei=ratei,pdf=pdf))
-        rate, rate_err1, rate_err2  = credible_interval(stats, rate)
+        rate, rate_err1, rate_err2  = confidence_interval(ratei, pdf, rate)
     else:
-        # Non-detection, calculate 95% upper limit on rate.
-        obj = lambda rate : binom.pmf(0, ntrials, rate) - 0.05
+        # Non-detection, upper limit on rate.
+        maxrate = min(1, 10 / n)
+        ratei = np.linspace(0, maxrate, 1000)
+        pdf = binom_gamma(ratei,n,k)
+        pdf /= pdf.sum()
+        stats = pd.DataFrame(dict(ratei=ratei,pdf=pdf))
+        scdf = InterpolatedUnivariateSpline(
+            np.array(stats.ratei),np.array(stats.pdf.cumsum())
+        )
+        obj = lambda rate : scdf(rate) - quantile_uplim
         rate_ul = newton(obj,1e-4,maxiter=100)
 
     return rate, rate_err1, rate_err2, rate_ul, stats
 
+def confidence_interval(x, pdf, xmode, method='hpd'):
+    """
+    Compute confidence interval from a discrete PDF
 
-def credible_interval(stats, rate):
-    """
-    Measure the narrowest region surrounding the mode containing 0.683 of the 
-    PDF
+    Args:
+        x: independent variable
+        pdf: independent variable
+    
+
     """
     
-    assert np.allclose(stats.pdf.sum(),1.0), "Must normalize PDF"
-    
-    stats['dmode'] = np.abs(stats['ratei'] - rate)
-    stats = stats.sort_values(by='dmode')
-    idx_cred = stats[stats.pdf.cumsum() < 0.683].index
-    ratelo = stats.ix[idx_cred].ratei.min()
-    ratehi = stats.ix[idx_cred].ratei.max()
-    rate_err1 = ratehi-rate
-    rate_err2 = ratelo-rate
-    return rate, rate_err1, rate_err2 
+    assert np.allclose(pdf.sum(),1.0), "Must normalize PDF"
+    if method=='hpd':
+        stats = pd.DataFrame(dict(x=x,pdf=pdf))
+        stats['dmode'] = np.abs(stats['x'] - xmode)
+        stats = stats.sort_values(by='dmode')
+        idx_cred = stats[stats.pdf.cumsum() < 0.683].index
+        xlo = stats.ix[idx_cred].x.min()
+        xhi = stats.ix[idx_cred].x.max()
+        x_err1 = xhi - xmode
+        x_err2 = xlo - xmode
+    elif method=='quantiles':
+        pass
+
+    return xmode, x_err1, x_err2 
 
 def combine_cells(df, plot_diag=False):
     """
@@ -683,30 +714,35 @@ def combine_cells(df, plot_diag=False):
         _, _, _, rate_ul, stats = binomial_rate(ntrials, nplanets)
         out['rate_ul'] = rate_ul
         return out
-        
-    # Compute combined occurrence by performing a convolution of the pdfs
-    idx =  df[df.nplanets>0].index
 
+    #
+    # Compute combined occurrence by performing a convolution of the pdfs
+    #
+    idx =  df[df.nplanets>0].index
     df = df.ix[idx]
     rateL = [] 
     pdfL = []
     ntrialsL = []
+    # Grab the PDFs
     for i, row in df.ix[idx].iterrows():
         _, _, _, _, stats = binomial_rate(row.ntrials, row.nplanets)
         stats = stats.sort_values(by='ratei')
         rateL.append(np.array(stats.ratei))
         pdfL.append(np.array(stats.pdf))
         ntrialsL.append(row.ntrials) 
-
     out['ntrials'] = np.mean(ntrialsL)
 
     rate2d = np.vstack(rateL)
     pdf2d = np.vstack(pdfL)
     rateistep = np.min(rate2d[:,1:] - rate2d[:,:-1])
+    rateistep = 3e-5
+    #rateistep = 3e-6
     rateimax = np.max(rate2d)
+    #rateimax = 1e-4
     ratei = np.arange(0, rateimax, rateistep)
 
     # resample the rate onto a constant scale
+    print "resampling PDFs on drate = {}".format(rateistep)
     pdfi2d = []
     for i in range(pdf2d.shape[0]):
         rate = rate2d[i]
@@ -721,7 +757,9 @@ def combine_cells(df, plot_diag=False):
 
     stats = pd.DataFrame(dict(ratei=rateiconv,pdf=pdfconv))
     rate = stats.sort_values(by='pdf').iloc[-1].ratei
-    rate, rate_err1, rate_err2 = credible_interval(stats, rate)
+    rate, rate_err1, rate_err2 = confidence_interval(
+        stats.ratei, stats.pdf, rate
+    )
 
     if plot_diag:
         fig,axL = subplots(nrows=2,sharex=True)
@@ -741,5 +779,4 @@ def combine_cells(df, plot_diag=False):
     out['rate_err1'] = rate_err1
     out['rate_err2'] = rate_err2
     return out
-
 
