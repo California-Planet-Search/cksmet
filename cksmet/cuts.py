@@ -48,9 +48,9 @@ class CutFaint(CutBase):
     texstr = '$Kp$ < 14.2'
     def cut(self):
         if self.sample=='cks':
-            kepmag = self.df['koi_kepmag']
+            kepmag = self.df['kic_kepmag']
         elif self.sample=='lamo':
-            kepmag = self.df['koi_kepmag']
+            kepmag = self.df['kic_kepmag']
         elif self.sample=='field':
             kepmag = self.df['kepmag']
 
@@ -116,11 +116,11 @@ class CutLowPPrad(CutBase):
 
 class CutLowPSrad(CutBase):
     cuttype = 'lowpsrad'
-    texstr = '$\sigma(R_\star) / R_\star < 12\%$'
+    texstr = '$\sigma(R_\star) / R_\star < 20\%$'
     plotstr = texstr
     def cut(self):
         if self.sample=='cks':
-            return self.df['iso_srad_err1']  / self.df['iso_srad'] > 0.12
+            return self.df['iso_srad_err1']  / self.df['iso_srad'] > 0.20
         elif self.sample=='field':
             return self.allpass()
 

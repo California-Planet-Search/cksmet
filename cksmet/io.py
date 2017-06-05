@@ -13,6 +13,8 @@ from cpsutils.pdplus import LittleEndian
 import cksphys.io
 import cksmet.cuts
 
+import cksspec.io
+
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 
 FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
@@ -176,27 +178,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         dfbin['fe_mean_err'] = dfbin['fe_std']/ np.sqrt(dfbin['nstars'])
         df = dfbin
     elif table=='lamost-dr2':
-        hduL = fits.open('data/lamost/dr2_stellar.fits.gz')
-        df = pd.DataFrame(LittleEndian(hduL[1].data))
-        df = df.query('tsource=="Kepler"')
-        df = df[df.tcomment.str.contains('kplr\d{9}')]
-        df['id_kic'] = df.tcomment.str.slice(start=4).astype(int)
-        df = df['id_kic teff teff_err logg logg_err feh feh_err'.split()]
-        df['steff'] = df['teff']
-        df['slogg'] = df['logg']
-        df['smet'] = df['feh']
-        df['steff_err1'] = df['teff_err']
-        df['steff_err2'] = -1.0 * df['teff_err']
-        df['slogg_err1'] = df['logg_err']
-        df['slogg_err2'] = -1.0 * df['logg_err']
-        df['slogg_err1'] = df['logg_err']
-        df['slogg_err2'] = -1.0 * df['logg_err']
-        df['smet_err1'] = df['feh_err']
-        df['smet_err2'] = -1.0 * df['feh_err']
-        df = add_prefix(df,'lamo_')
-        stellar = cksphys.io.load_table('stellar17',cache=True)
-        df = pd.merge(df,stellar)
-        return df
+        df = cksspec.io.load_table('lamost-dr2')
 
     elif table=='cks':
         df = pd.read_csv('../CKS-Physical/data/cks_physical_merged.csv')
