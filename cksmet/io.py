@@ -12,11 +12,9 @@ from astropy.table import Table
 from cpsutils.pdplus import LittleEndian
 import cksphys.io
 import cksmet.cuts
-
 import cksspec.io
 
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
-
 FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
@@ -35,7 +33,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         pandas.DataFrame: table
 
     """
-
     if cache==1:
         try:
             df = pd.read_hdf(cachefn,table)
@@ -49,113 +46,15 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
             print "Cache not built for table: %s" % table
             print "Building cache..."
             cache=2
+
     if cache==2:
         df = load_table(table, cache=False)
         print "writing table {} to cache".format(table)
         df.to_hdf(cachefn,table)
         return df
 
-    '''
-    elif table=='nea':
-        df = pd.read_csv('data/nea_2017-01-28.csv',comment='#')
-    '''
     if table=='nea':
         df = cksphys.io.load_table('nea')
-
-    elif table=='hadden-ttv':
-        tablefn = '/Users/petigura/Research/CKS-Metallicity/data/hadden17/masstable.tex'
-        with open(tablefn) as f:
-            lines = f.readlines()
-
-        df = []
-        for row in lines:
-            d = {}
-            if row.count('&')!=8:
-                continue
-            row = row.split('&')
-            name = row[0]
-            if name.count('*')==0:
-                continue
-
-            name = name.split(' ')
-            name = name[0]+' '+name[1][0] 
-            d['pl_name'] = name
-            d['pl_orbper'] = row[1]
-            d['pl_rade'],d['pl_radeerr1'],d['pl_radeerr2'] = split_err(row[2])
-            d['st_mass'],d['st_masserr1'],d['st_masserr2'] = split_err(row[3])
-            d['pl_masse'],d['pl_masseerr1'],d['pl_masseerr2'] = split_err(row[4])
-            df.append(d)
-        df = pd.DataFrame(df)
-        df = df.convert_objects(convert_numeric=True)
-
-    elif table=='hadden-rv':
-        tablefn = 'data/hadden17/rvtable.tex'
-        with open(tablefn) as f:
-            lines = f.readlines()
-
-        df = []
-        for row in lines:
-            d = {}
-            if row.count('&')!=4:
-                continue
-            row = row.split('&')
-            name = row[0]
-
-            name = name.split(' ')
-            name = name[0]+' '+name[1][0] 
-            d['pl_name'] = name
-            d['pl_orbper'] = row[1]
-            d['pl_masse'],d['pl_masseerr1'],d['pl_masseerr2'] = split_err(row[2])
-            d['pl_rade'],d['pl_radeerr1'],d['pl_radeerr2'] = split_err(row[3])
-            df.append(d)
-        df = pd.DataFrame(df)
-        df = df.convert_objects(convert_numeric=True)
-
-    elif table=='hadden':
-        ttv = load_table('hadden-ttv')
-        rv = load_table('hadden-rv')
-        ttv['pl_massmeth'] = 'ttv'
-        rv['pl_massmeth'] = 'rv'
-        df = pd.concat([ttv,rv])
-
-    elif table=='hadden+cks':
-        # Return hadden TTV planets with Kepler and KOI designations
-        df = load_table('hadden')
-        cks = cksphys.io.load_table('cksphys-merged',cache=2)
-        df1 = pd.merge(
-            df, cks, left_on='pl_name', right_on='id_kepler_name',how='left'
-        )
-        df = pd.concat([df1])
-
-    elif table=='hadden-ttv+cks':
-        # Return hadden TTV planets with Kepler and KOI designations
-        df = load_table('hadden-ttv')
-        cks = cksphys.io.load_table('cksphys-merged',cache=2)
-        df1 = pd.merge(
-            df, cks, left_on='pl_name', right_on='id_kepler_name',how='left'
-        )
-        df = pd.concat([df1])
-
-    elif table=='hadden-rv+cks':
-        # Return hadden TTV planets with Kepler and KOI designations
-        df = load_table('hadden-rv')
-        cks = cksphys.io.load_table('cksphys-merged',cache=2)
-        df1 = pd.merge(
-            df, cks, left_on='pl_name', right_on='id_kepler_name',how='left'
-        )
-        df = pd.concat([df1])
-
-    elif table=='hadden+cks+nea':
-        df = load_table('hadden+cks')
-        nea = load_table('nea')
-        df.index = df.pl_name
-        nea.index = nea.pl_name
-        df['st_metfe'] = df['cks_smet']
-        df['st_teff'] = df['cks_steff']
-        df['st_metfe'] = df.st_metfe.fillna(value=nea.st_metfe)
-        df['st_teff'] = df.st_metfe.fillna(value=nea.st_teff)
-        df['pl_name st_teff st_metfe'.split()]
-        return df
 
     elif table=='cksbin-fe':
         bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 5.7, 8.0, 11.3, 16]
@@ -177,6 +76,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         dfbin['fe_std'] = g.std()
         dfbin['fe_mean_err'] = dfbin['fe_std']/ np.sqrt(dfbin['nstars'])
         df = dfbin
+
     elif table=='lamost-dr2':
         df = cksspec.io.load_table('lamost-dr2')
 
@@ -208,7 +108,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = load_table('huber14+cdpp',cache=1)
         cuttypes = cksmet.cuts.plnt_cuttypes
         df = cksmet.cuts.add_cuts(df, cuttypes, 'field')
-
 
     else:
         assert False, "table {} not valid table name".format(table)
