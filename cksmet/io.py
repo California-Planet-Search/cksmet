@@ -146,9 +146,9 @@ def split_err(sval):
     return val, err1, err2
 
 
-def table_bin(df, bins):
+def table_bin(df, bins, key):
     g = df.groupby(pd.cut(df.iso_prad,bins=bins))
-    g = g['cks_smet']
+    g = g[key]
     dfbin = pd.DataFrame(index=g.first().index)
     dfbin['bin0'] = bins[0:-1]
     dfbin['bin1'] = bins[1:]
@@ -157,11 +157,10 @@ def table_bin(df, bins):
     dfbin['fe_mean'] = g.mean()
     dfbin['fe_std'] = g.std()
     dfbin['fe_mean_err'] = dfbin['fe_std']/ np.sqrt(dfbin['count'])
-    dfbin['fe_p05'] = g.apply(lambda x : np.percentile(x, 05))
-    dfbin['fe_p95'] = g.apply(lambda x : np.percentile(x, 95))
-    dfbin['fe_p01'] = g.apply(lambda x : np.percentile(x, 01))
-    dfbin['fe_p99'] = g.apply(lambda x : np.percentile(x, 99))
-    dfbin['fe_p50'] = g.apply(lambda x : np.percentile(x, 50))
+
+    for p in [1,5,25,50,75,95,99]:
+        k = key+'_{:02d}'.format(p)
+        dfbin[k] = g.apply(lambda x : np.percentile(x, p))
     return dfbin
 
 def latex_table(table):

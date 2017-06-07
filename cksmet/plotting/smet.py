@@ -45,12 +45,13 @@ def bins_to_xerr(bin0,binc,bin1):
 
 def prad_fe():
     """Plot of planet radius vs stellar metallicty"""
-    cks = cksmet.io.load_table('cks-cuts')
+    cks = cksmet.io.load_table('cks-cuts', cache=1)
+    yk = 'cks_smet'
     cks = cks[~cks.isany]
 #    bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 5.7, 8.0, 11.3, 16]
     bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 8.0, 16]
 #    bins = [0.5, 1.7, 4.0, 8.0, 16]
-    cksbin = cksmet.io.table_bin(cks, bins)
+    cksbin = cksmet.io.table_bin(cks, bins, yk)
 
     figure(figsize=(6,4))
 
@@ -71,19 +72,17 @@ def prad_fe():
     xlim(0.25,25)
     ylim(-0.9,0.7)
 
-
 def prad_fe_percentiles():
     """Plot of planet radius vs stellar metallicty"""
-    cks = cksmet.io.load_table('cks-cuts')
-    cks = cks[~cks.isany]
-
+    cks = cksmet.io.load_table('cks-cuts', cache=1)
+    yk = 'cks_smet'
     bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 8.0, 16]
-    #cks = cks.query(' -0.3 < cks_smet < 0.3')
-    cksbin = cksmet.io.table_bin(cks, bins)
+    cksbin = cksmet.io.table_bin(cks, bins, yk)
 
     figure(figsize=(6,4))
     semilogx()
-    plot(cks.iso_prad,cks.cks_smet,'.',color='LightGray')
+
+    plot(cks.iso_prad,cks[yk],'.',color='LightGray')
     prad_fe_label()
 
     i = 0 
@@ -92,10 +91,12 @@ def prad_fe_percentiles():
         xerr = [[x - row.bin0], [row.bin1 - x] ]
         yerr = row.fe_mean_err
         y = row.fe_mean
-        errorbar(x, row.fe_mean, xerr=xerr,color='r',zorder=10)
-        errorbar(x,row.fe_p01,xerr=xerr,color='b',zorder=10)
-        errorbar(x,row.fe_p50,xerr=xerr,color='b',zorder=10)
-        errorbar(x,row.fe_p99,xerr=xerr,color='b',zorder=10)
+        yerr = row.fe_mean_err
+        errorbar(x, row.fe_mean, xerr=xerr, yerr=yerr, color='r',zorder=10)
+        for p in [25,75]:
+            pk = yk+'_{:02d}'.format(p)
+            errorbar(x,row[pk],xerr=xerr,color='b',zorder=10)
+
         i+=1
 
     xlim(0.25,25)
