@@ -10,8 +10,8 @@ from astropy import units as u
 from astropy.table import Table
 
 from cpsutils.pdplus import LittleEndian
-import cksphys.io
 import cksmet.cuts
+import cksphys.io
 import cksspec.io
 
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
@@ -22,6 +22,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     Args:
         table (str): name of table. must be one of
+            - nea 
 
 
         cache (Optional[int]): whether or not to use the cache
@@ -80,6 +81,10 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table=='lamost-dr2':
         df = cksspec.io.load_table('lamost-dr2')
 
+    elif table=='lamost-dr2-cal':
+        fn = os.path.join(DATADIR,'lamost-dr2-cal.hdf')
+        df = pd.read_hdf(fn, 'lamost-dr2-cal')
+
     elif table=='cks':
         df = pd.read_csv('../CKS-Physical/data/cks_physical_merged.csv')
 
@@ -97,17 +102,52 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         cuttypes = 'none notdwarf faint diluted grazing longper badprad'.split()
         df = cksmet.cuts.add_cuts(df, cksmet.cuts.plnt_cuttypes, 'cks')
         
-    elif table=='lamost-dr2-cuts':
+    elif table=='lamost-dr2-cal-cuts':
         # Apply similar set of cuts to the lamost sample.
-        df = load_table('lamost-dr2',cache=1)
+        df = load_table('lamost-dr2-cal')
         cuttypes = cksmet.cuts.lamo_cuttypes
         df = cksmet.cuts.add_cuts(df, cuttypes, 'lamo')
 
     elif table=='field-cuts':
-        # Apply similar set of cuts to the lamost sample.
+        # Apply similar set of cuts to the KIC sample
         df = load_table('huber14+cdpp',cache=1)
         cuttypes = cksmet.cuts.plnt_cuttypes
         df = cksmet.cuts.add_cuts(df, cuttypes, 'field')
+
+    elif table=='cdpp':
+        fn = os.path.join(DATADIR,'kic_q0_q17.dat')
+        df = idl.readsav(fn)
+        df = pd.DataFrame(df['kic'])
+
+    elif table=='huber14+cdpp':
+        df = load_table('cdpp',cache=1)
+        df = df.rename(columns={
+            'KEPMAG':'kepmag','KICID':'id_kic','CDPP3':'cdpp3','CDPP6':'cdpp6',
+            'CDPP12':'cdpp12'}
+        )
+        df = df['id_kic kepmag cdpp3 cdpp6 cdpp12'.split()]
+        cdpp = np.vstack(df.ix[:,'cdpp3'])
+        for col in 'cdpp3 cdpp6 cdpp12'.split():
+            cdpp = np.vstack(df.ix[:,col])
+            cdpp[cdpp==0.0] = np.nan
+            cdpp = np.nanmedian(cdpp,axis=1)
+            df[col] = cdpp
+            df['log'+col] = np.log10(cdpp)
+
+        huber14 = cksspec.io.load_table('huber14')
+        stellar17 = cksspec.io.load_table('stellar17')
+        df = pd.merge(df,huber14)
+        df = pd.merge(df,stellar17)
+        
+        # add place holder column for quarter zero
+        df['st_quarters'] = '0'+df.st_quarters 
+        df['tobs'] = 0
+        for q in range(18):
+            # Was quarter observed
+            qobs = df.st_quarters.str.slice(start=q,stop=q+1).astype(int)
+            if q==17:
+                qobs=0
+            df['tobs'] += qobs * long_cadence_day * lc_per_quarter[q]
 
     else:
         assert False, "table {} not valid table name".format(table)
@@ -124,6 +164,19 @@ def add_prefix(df,prefix,ignore=['id']):
             namemap[col] = prefix + col 
     df = df.rename(columns=namemap)
     return df
+
+def sub_prefix(df, prefix,ignore=['id']):
+    namemap = {}
+    for col in list(df.columns):
+        skip=False
+        for _ignore in ignore:
+            if col.count(_ignore) > 0:
+                skip = True
+        if not skip:
+            namemap[col] = col.replace(prefix,'') 
+    df = df.rename(columns=namemap)
+    return df
+
 
 def split_err(sval):
     """Parse the double-sided errors from hadden""" 
@@ -154,13 +207,13 @@ def table_bin(df, bins, key):
     dfbin['bin1'] = bins[1:]
     dfbin['binc'] = dfbin.eval('sqrt(bin0*bin1)')
     dfbin['count'] = g.count()
-    dfbin['fe_mean'] = g.mean()
-    dfbin['fe_std'] = g.std()
-    dfbin['fe_mean_err'] = dfbin['fe_std']/ np.sqrt(dfbin['count'])
+    dfbin[key + '_mean'] = g.mean()
+    dfbin[key + '_std'] = g.std()
+    dfbin[key +'_mean_err'] = dfbin[key + '_std']/ np.sqrt(dfbin['count'])
 
     for p in [1,5,25,50,75,95,99]:
         k = key+'_{:02d}'.format(p)
-        dfbin[k] = g.apply(lambda x : np.percentile(x, p))
+        dfbin[k] = g.quantile(q=p * 0.01)
     return dfbin
 
 def latex_table(table):

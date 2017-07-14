@@ -74,16 +74,16 @@ def samples():
 
     # KepMag
     sca(axL[1,jcks])
-    hist(cks.koi_kepmag,color='LightGray',**histkw)
-    hist(cksc.koi_kepmag,color='b',**histkw)
+    hist(cks.kic_kepmag,color='LightGray',**histkw)
+    hist(cksc.kic_kepmag,color='b',**histkw)
 
     sca(axL[1,jfield])
     hist(field.kepmag,color='LightGray',**histkw)
     hist(fieldc.kepmag,color='b',**histkw)
 
     sca(axL[1,2])
-    hist(lamo.koi_kepmag,color='LightGray',**histkw)
-    hist(lamoc.koi_kepmag,color='b',**histkw)
+    hist(lamo.kic_kepmag,color='LightGray',**histkw)
+    hist(lamoc.kic_kepmag,color='b',**histkw)
     
     # Metal
     

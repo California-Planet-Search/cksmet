@@ -46,6 +46,7 @@ def bins_to_xerr(bin0,binc,bin1):
 def prad_fe():
     """Plot of planet radius vs stellar metallicty"""
     cks = cksmet.io.load_table('cks-cuts', cache=1)
+    xk = 'binc'
     yk = 'cks_smet'
     cks = cks[~cks.isany]
 #    bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 5.7, 8.0, 11.3, 16]
@@ -60,12 +61,15 @@ def prad_fe():
     prad_fe_label()
     prad_fe_errbar()
 
+    yk = 'cks_smet_mean'
+    yerrk = 'cks_smet_mean_err'
+
     i = 0 
     for _i, row in cksbin.iterrows():
         x = np.sqrt(row.bin0*row.bin1)
         xerr = [[x - row.bin0], [row.bin1 - x] ]
-        yerr = row.fe_mean_err
-        y = row.fe_mean
+        yerr = row[yerrk]
+        y = row[yk]
         errorbar(x,y,xerr=xerr,yerr=yerr,color='r',zorder=10)
         i+=1
 
@@ -75,8 +79,15 @@ def prad_fe():
 def prad_fe_percentiles():
     """Plot of planet radius vs stellar metallicty"""
     cks = cksmet.io.load_table('cks-cuts', cache=1)
-    yk = 'cks_smet'
+    cks = cks[~cks.isany]
+
     bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 8.0, 16]
+
+    xk = 'binc'
+    yk = 'cks_smet'
+    yerrk = 'cks_smet_mean_err'
+
+
     cksbin = cksmet.io.table_bin(cks, bins, yk)
 
     figure(figsize=(6,4))
@@ -87,16 +98,16 @@ def prad_fe_percentiles():
 
     i = 0 
     for _i, row in cksbin.iterrows():
-        x = np.sqrt(row.bin0*row.bin1)
+        x = row[xk]
         xerr = [[x - row.bin0], [row.bin1 - x] ]
-        yerr = row.fe_mean_err
-        y = row.fe_mean
-        yerr = row.fe_mean_err
-        errorbar(x, row.fe_mean, xerr=xerr, yerr=yerr, color='r',zorder=10)
+        yerr = row[yerrk]
+        yk = 'cks_smet_mean'
+        y = row[yk]
+        errorbar(x, row[yk], xerr=xerr, yerr=yerr, color='r',zorder=10)
+        yk = 'cks_smet'
         for p in [25,75]:
             pk = yk+'_{:02d}'.format(p)
             errorbar(x,row[pk],xerr=xerr,color='b',zorder=10)
-
         i+=1
 
     xlim(0.25,25)
@@ -106,6 +117,8 @@ def prad_fe_mean():
     """Plot of planet radius vs stellar metallicty"""
     semilogx()
     cksbin = cksmet.io.load_table('cksbin-fe')
+
+
     xerr =  np.vstack([[cksbin.binc - cksbin.bin0], [cksbin.bin1 - cksbin.binc] ])
 
     errorbar(cksbin.binc,cksbin.fe_mean,yerr=cksbin.fe_mean_err,xerr=xerr,fmt='o')

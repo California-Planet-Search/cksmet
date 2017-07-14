@@ -18,7 +18,7 @@ plotdict ={
 }
 
 lamo_cuttypes = 'none faint badteff badlogg'.split()
-plnt_cuttypes = 'none faint badteff badlogg lowpsrad longper allfp diluted grazing'.split()
+plnt_cuttypes = 'none faint badteff badlogg lowpsrad longper allfp diluted grazing notdwarf'.split()
 
 samples = 'cks lamo field'.split()
 
@@ -67,7 +67,7 @@ class CutTeff(CutBase):
         if self.sample=='cks':
             teff = self.df['cks_steff']
         elif self.sample=='lamo':
-            teff = self.df['lamo_teff']
+            teff = self.df['lamo_steff']
         elif self.sample=='field':
             teff = self.df['huber_steff']
 
@@ -84,7 +84,7 @@ class CutLogg(CutBase):
         if self.sample=='cks':
             logg = self.df['cks_slogg']
         elif self.sample=='lamo':
-            logg = self.df['lamo_logg']
+            logg = self.df['lamo_slogg']
         elif self.sample=='field':
             logg = self.df['huber_slogg']
         b = ~logg.between(3.9,5.0)
@@ -155,6 +155,25 @@ class CutLongPer(CutBase):
             return self.allpass()
         elif self.sample=='field':
             return self.allpass()
+
+class CutNotDwarf(CutBase):
+    """Remove stars with a FP designation from a number of catalogs
+    """
+    cuttype = 'notdwarf'
+    plotstr = 'Dwarf star'
+    texstr = 'Dwarf star'
+    def cut(self):
+        if self.sample=='cks':
+            srad = self.df['iso_srad']
+            logsrad = np.log10(srad)
+            steff = self.df['iso_steff']
+            b1 = logsrad > 0.00025 * (steff - 5500) + 0.2
+            #b2 = (srad < 0.8) | (srad > 1.2)
+            b2 = (srad < 0.8) 
+            return b1 | b2
+        elif self.sample=='field':
+            return self.allpass()
+
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 
