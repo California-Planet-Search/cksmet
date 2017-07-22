@@ -25,7 +25,7 @@ def cuts_lamost():
     """
     Apply cuts in sucession, count number of stars that pass
     """
-    lamo = cksmet.io.load_table('lamost-dr2',cache=1)
+    lamo = cksmet.io.load_table('lamost-dr2-cal',cache=1)
     print_cut_statistics(lamo, 'lamo', lamo_cuttypes)
 
 def print_cut_statistics(df, sample, cuttypes):
@@ -53,17 +53,26 @@ def smet_dist_lamost():
     """
     Apply cuts in sucession, count number of stars that pass
     """
-    lamo = cksmet.io.load_table('lamost-dr2-cuts',cache=0)
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=0)
     lamo = lamo[~lamo.isany]
 
     cks = cksmet.io.load_table('cks-cuts',cache=1)
     cks = cks.query('isany==False')
     
-    quantiles = [0.01, 0.1,0.5,0.9,0.99]
-    lamo = lamo.lamo_smet.quantile(quantiles)
-    cks = cks.cks_smet.quantile(quantiles)
+    quantiles = [0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99]
+    cks = cks.cks_smet
+    lamo = lamo.lamo_smet
+    lamoq = lamo.quantile(quantiles)
+    cksq = cks.quantile(quantiles)
 
-    for q, smet in lamo.iteritems():
-        print r"{:.0f} & {:.2f} & {:.2f} \\".format(q*100, cks.ix[q], lamo.ix[q])
+    print r"% statistic, CKS, LAMOST"
+    print r"Mean & {:.3f} & {:.3f} \\".format(cks.mean(), lamo.mean())
+    print r"St. Dev. & {:.3f} & {:.3f} \\".format(cks.std(), lamo.std())
+    print r"St. Err. Mean & {:.3f} & {:.3f} \\".format(
+        cks.std()/np.sqrt(len(cks)), lamo.std()/np.sqrt(len(lamo))
+    )
 
+
+    for q, smet in lamoq.iteritems():
+        print r"{:.0f}\% & {:.3f} & {:.3f} \\".format(q*100, cksq.ix[q], lamoq.ix[q])
 

@@ -628,26 +628,55 @@ def cuts():
         )
 
 
+
 def period_prad_slices(mode='tall'):
     sns.set_style('whitegrid')
-    yt = [0.5,1,2,4,8,16,32]
-    xt = [0.3,1,3,10,30,100,300]
+    yt = [0.5, 1, 2, 4, 8, 16, 32]
+    xt = [0.3, 1, 3, 10, 30, 100, 300]
     # smet_bins = [-0.6, -0.4, -0.2, 0.0, +0.2, 0.4]
     # smet_bins = [-0.8, -0.3, 0.4]
 
     # Provision figure
     height = 3
     width = 3.5
-    if mode=='tall':
-        fig,axL = subplots(nrows=nbins,ncols=1,figsize=(width,nbins*height))
-    if mode=='square':
+    if mode=='four-equal-smet':
         smet_bins = [-0.75, -0.45, -0.15, 0.15, 0.45]
+        
+        
+        labels = []
+        for i in range(4):
+            labels+='[Fe/H] = ({:+.2f},{:+.2f})'.format(
+                smet_bins[i],smet_bins[i+1]
+            )
+        
         nrows = 2
         ncols = 2
         fig,axL = subplots(
             nrows=nrows,ncols=ncols,figsize=(ncols*width,nrows*height),
             sharex=True,sharey=True
         )
+
+    if mode=='four-equal-stars':
+        smet_bins = [-10, -0.115, 0.013, 0.121, 10]
+        labels = [
+            '[Fe/H] < -0.11 dex',
+            '[Fe/H] = -0.12--0.01 dex',
+            '[Fe/H] = 0.01--0.12',
+            '[Fe/H] > 0.12 dex',
+        ]
+        nrows = 2
+        ncols = 2
+        fig,axL = subplots(
+            nrows=nrows,ncols=ncols,figsize=(ncols*width,nrows*height),
+            sharex=True,sharey=True
+        )
+
+        setp(axL[1,:], xlabel='Orbital Period (days)')
+        setp(axL[:,0], ylabel='Planet Size (Earth-radii)')
+
+    # Load up LAMOST metallicities
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=2)
+    lamo = lamo[~lamo.isany]
 
     plnt = cksmet.io.load_table('cks-cuts')
     plnt = plnt[~plnt.isany]
@@ -662,11 +691,25 @@ def period_prad_slices(mode='tall'):
         loglog()
         smet1 = smet_bins[i]
         smet2 = smet_bins[i+1]
-        label = '[Fe/H] = ({:+.2f},{:+.2f})'.format(smet1,smet2)
-        cut = plnt[plnt.cks_smet.between(smet1,smet2)]
-        cut2 = plnt
-        plot(cut2.koi_period,cut2.iso_prad,'o',label='',color='LightGray',ms=3)
-        plot(cut.koi_period,cut.iso_prad,'o',label=label,mec='Blue',ms=3)
+        plnt_cut = plnt[plnt.cks_smet.between(smet1,smet2)]
+        lamo_cut = lamo[lamo.lamo_smet.between(smet1,smet2)]
+        
+        f_planet = 1.0 * len(plnt_cut) / len(plnt)        
+        f_stars = 1.0 * len(lamo_cut) / len(lamo)
+
+        label = labels[i]
+        label += "\nf(pl) = {:.0f}%".format(100*f_planet)
+        label += "\nf(st) = {:.0f}%".format(100*f_stars)
+
+        # Whole sample for comparison
+        kwpts = dict(marker='o',ms=3, lw=0)
+        kw = dict(label=label,color='LightGray', **kwpts)
+        plot(plnt.koi_period,plnt.iso_prad, **kw)
+        
+        # Whole sample for comparison
+        kw = dict(label='',color='Blue', **kwpts)
+        plot(plnt_cut.koi_period,plnt_cut.iso_prad, **kw)
+
         legend(frameon=False,markerscale=0)
         yticks(yt,yt)
         xticks(xt,xt)

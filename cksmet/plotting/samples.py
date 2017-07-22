@@ -30,10 +30,9 @@ def samples():
     height = 2.5 * nrows
     width = 3 * ncols
     fig, axL = subplots(nrows=nrows, ncols=ncols, figsize=(width, height))
-    
-    lamo = cksmet.io.load_table('lamost-dr2-cuts',cache=1)
-    lamo = lamo.groupby('id_kic').first()
-    lamoc = lamo.query('isany==False')
+
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=2)
+    lamoc = lamo[~lamo.isany]
 
     cks = cksmet.io.load_table('cks-cuts',cache=1)
     cksc = cks.query('isany==False')
