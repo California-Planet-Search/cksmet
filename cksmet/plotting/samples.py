@@ -9,6 +9,7 @@ import pandas as pd
 import cksphys.io
 import cksmet.io
 import cksmet.cuts
+from astropy import constants as c
 
 figsize = (4,5)
 errorbar_kw = dict(fmt='.',markersize=5,color='b')
@@ -123,3 +124,103 @@ def samples():
             letter,loc=2, frameon=False, 
             prop=dict(size='large', weight='bold')
         )
+
+def lamo_detectability():
+    querys = ['lamo_smet < 0','0 < lamo_smet']
+    colors = ['b','r']
+    labels = ['[Fe/H] < 0','[Fe/H] > 0']
+
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts+cdpp',cache=1)
+    lamo = lamo[~lamo.isany]
+    fig1 = figure(figsize=(4,4))
+    semilogy()
+
+    bins = arange(11,14.1,0.5)
+    #querys = ['-0.5 < lamo_smet < -0.1','0.1 < lamo_smet < 0.5']
+    for i in range(len(querys)):
+        query = querys[i]
+        color=colors[i]
+        label=labels[i]
+        cut = lamo.query(query) 
+        plot(cut.kepmag,cut.cdpp3,'.',color=color,zorder=1,label=label,alpha=0.8)
+        g = cut.groupby(pd.cut(cut.kepmag,bins))
+        i = 0
+
+        for interval, cdpp in g['cdpp3'].median().iteritems():
+            if i==0:
+                label=query
+            else:
+                label=None
+            plot([interval.left,interval.right], [cdpp,cdpp],color='w',lw=6)
+            plot([interval.left,interval.right], [cdpp,cdpp],color=color,lw=3)
+            i+=1
+            print query, interval.left,interval.right, cdpp
+
+    xlim(11,14)
+    ylim(15,150)
+    legend()
+
+    xlabel('kepmag')
+    ylabel('CDPP3 (ppm)')
+    minorticks_off()
+    yticks([20,30,40,50,60,70,80,90,100],[20,30,40,50,60,70,80,90,100])
+    fig1.set_tight_layout(True)
+
+
+    fig2 = figure(figsize=(4,4))
+    kepmag = (12,14)
+    cut2 = lamo[lamo.kepmag.between(*kepmag)]
+    fsamp =  100 * len(cut2) / len(lamo)
+    print "for kepmag = {}, {:.2f}\% of stellar sample median CDPP3 is ".format(kepmag, fsamp)
+
+    fig2 = figure(figsize=(4,4))
+    for i in range(2):
+        query = querys[i]
+        color=colors[i]
+        label=labels[i]
+        cut = lamo.query(query) 
+        plot(cut.lamo_steff,cut.lamo_slogg,'.',color=color)
+
+    xlim(6500,4700)
+    ylim(5.0,4.0)
+    xlabel('Effective Temp. (K)')
+    ylabel('logg (dex)')
+    fig2.set_tight_layout(True)
+    return fig1,fig2
+
+
+def smet_snr():
+    df = pd.read_csv('isoclassify-lamost-dr2.csv')
+    huber14 = cksmet.io.load_table('huber14+cdpp',cache=1)
+    lamo = cksmet.io.load_table('lamost-dr2-cuts',cache=1)
+    lamo = lamo[~lamo.isany]
+    lamo = pd.merge(lamo,huber14['id_kic kepmag cdpp3'.split()],on='id_kic')
+    df = pd.merge(lamo,df,left_on='id_kic',right_on='id_starname')
+    fig = figure(figsize=(4,4))
+    srad = df.iso_srad * c.R_sun
+    prad = 1 * c.R_earth
+    df['snr'] = (prad / srad)**2 / (1e-6 * df.cdpp3)
+    plot(df.lamo_smet,df.snr,',')
+
+    bins = arange(-0.6,0.41,0.2,)
+    g = df.groupby(pd.cut(df.lamo_smet,bins))
+    i = 0
+    for interval, snr in g['snr'].median().iteritems():
+        x = [interval.left,interval.right]
+        y = [snr,snr]
+        plot(x,y,color='w',lw=6)
+        plot(x,y,color='b',lw=3)
+        i+=1
+        print interval.left,interval.right, snr
+
+    xlim(-1,0.6)
+    ylim(0.1,10)
+    semilogy()
+    xlabel('[Fe/H] (dex)')
+    ylabel('Per Transit SNR \n(1 $\mathregular{R}_\mathregular{E}$ planet)')
+    fig.set_tight_layout(True)
+
+
+    return fig
+
+

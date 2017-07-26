@@ -406,10 +406,12 @@ class Occurrence(object):
     
     def set_grid_loguni(self, downsamp):
         """
-        Compute occurrence in bins, with the assumption that planet occurence (not the sensitivity) is log uniform over the box. 
+        Compute occurrence in bins, with the assumption that planet
+        occurence (not the sensitivity) is log uniform over the box.
 
         Args:
             downsamp (dict): Amount by which to down sample the finer grid
+
         """
 
         # Create the downsampled grid
@@ -516,7 +518,8 @@ class Occurrence(object):
         """
         Compute occurrence with errors
         
-        Look for planets in each bin. If they exist, compute 1000 samples of the pdf
+        Look for planets in each bin. If they exist, compute 1000
+        samples of the pdf
         """
         # check that a/Rstar does not change by more than 10% over a bin
         # check that prob_detectr does not change by more than 10% over a bin
@@ -561,7 +564,6 @@ class Occurrence(object):
                 df.ix[i,'is_prob_tr_const'] = 1
 
             ratio = prob_det_hi/prob_det_lo
-            # print row.per1, row.prad2, row.per2, row.prad1, prob_det_hi, prob_det_lo
             if np.abs(ratio-1) < prob_det_const_thresh:
                 df.ix[i,'is_prob_det_const'] = 1
 

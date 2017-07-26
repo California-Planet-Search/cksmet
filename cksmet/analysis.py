@@ -3,9 +3,10 @@ import cksmet.io
 from scipy.interpolate import interp1d
 import numpy as np
 import cksmet.grid
-lamo = cksmet.io.load_table('lamost-dr2-cuts',cache=1)
+import cPickle as pickle
+lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
 lamo = lamo[~lamo.isany]
-x = lamo.lamo_feh
+x = lamo.lamo_smet
 xs = np.sort(x)
 ys = np.arange(1, len(xs)+1)/float(len(xs))
 metcdf = interp1d(xs,ys)
@@ -13,9 +14,6 @@ namemap = {
     'iso_srad':'srad','koi_period':'per','iso_prad':'prad','iso_sma':'smax',
     'koi_impact':'impact','koi_max_mult_ev':'mes'
 }
-import cPickle as pickle
-
-
 
 def cachefn(smetbin):
     return "occ_smet={:+.2f},{:+.2f}.pkl".format(*smetbin)
@@ -38,6 +36,7 @@ def load_occur(cachefn=None,cache=0,smetbin=None):
             occ = pickle.load(f)
             return occ
 
+    # Load up the culled CKS sample.
     cks = cksmet.io.load_table('cks-cuts')
     cks = cks[~cks.isany]
     cks = cks.dropna(subset=['iso_prad'])
@@ -67,7 +66,6 @@ def load_occur(cachefn=None,cache=0,smetbin=None):
     field = cksmet.io.load_table('field-cuts',cache=1)
     field = field.query('~isany')
     field = field.rename(columns={'huber_srad':'srad','huber_smass':'smass'})
-    #field['srad'] *= 1.0
     field.index = field.id_kic
     prob_det_mes_name = 'step-%i' % mes
     print "prob_det_mes_name {}".format(prob_det_mes_name)
@@ -88,7 +86,7 @@ def load_occur(cachefn=None,cache=0,smetbin=None):
     occ.set_grid_loguni(downsamp)
     if cache==2:
         with open(cachefn,'w') as f:
-            occ = pickle.dump(occ,f)
+            pickle.dump(occ,f)
             print "saving {} ".format(cachefn)
         
     return occ

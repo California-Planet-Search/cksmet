@@ -85,6 +85,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         fn = os.path.join(DATADIR,'lamost-dr2-cal.hdf')
         df = pd.read_hdf(fn, 'lamost-dr2-cal')
 
+
+
     elif table=='cks':
         df = pd.read_csv('../CKS-Physical/data/cks_physical_merged.csv')
 
@@ -93,6 +95,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         lamost = load_table('lamost-dr2',cache=1)
         df = pd.merge(lamost,cks,on='id_kic')
         return df
+
+
 
     elif table=='cks-cuts':
         df =  cksphys.io.load_table(
@@ -107,6 +111,14 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = load_table('lamost-dr2-cal')
         cuttypes = cksmet.cuts.lamo_cuttypes
         df = cksmet.cuts.add_cuts(df, cuttypes, 'lamo')
+
+
+    elif table=='lamost-dr2-cal-cuts+cdpp':
+        lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+        huber14 = cksmet.io.load_table('huber14+cdpp',cache=1)
+        huber14 = huber14['id_kic kepmag cdpp3 cdpp6 cdpp12'.split()]
+        lamo = pd.merge(lamo,huber14,on='id_kic')
+        df = lamo
 
     elif table=='field-cuts':
         # Apply similar set of cuts to the KIC sample
