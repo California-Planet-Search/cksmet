@@ -13,7 +13,7 @@ import cksmet.grid
 from scipy.special import gammaln as gamln
 from  scipy import special
 from scipy.interpolate import InterpolatedUnivariateSpline
-
+import scipy.integrate
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
@@ -38,6 +38,8 @@ class Completeness(object):
                 - smass: Stellar mass (solar masses) 
                 - srad: Stellar radius (solar-radii) 
             grid (Grid): Grid object that contains boundaries of bins.
+            prob_det_mes_name (str): method to convert MES into probabilty 
+                of detection. Must be one of: 
 
         """
         self.stars = stars
@@ -211,7 +213,7 @@ class Completeness(object):
         
         if method=='direct':
             mes = self.mes_scaled(per, prad)
-            _prob_det = 1.0*self.prob_det_mes(mes).sum() / self.nstars 
+            _prob_det = 1.0 * self.prob_det_mes(mes).sum() / self.nstars 
         elif method=='interp': 
             #_prob_det = self.prob_det_interp((per, prad))
             _prob_det = self.prob_det_interp(per, prad, grid=False)
@@ -328,12 +330,36 @@ class Completeness(object):
         x1 = np.array(self.grid.ds.prad)
         points  = (x0, x1) 
         values = self.grid.ds['prob_det'].transpose('per','prad')
-        #self.prob_det_interp = RegularGridInterpolator(
-        #    points, values, bounds_error=False
-        #)        
-        self.prob_det_interp = RectBivariateSpline(
-            x0, x1, values
-        )        
+        self.prob_det_interp = RectBivariateSpline(x0, x1, values)
+
+    def mean_prob_trdet(self, per1, per2, prad1, prad2):
+        logper1 = np.log(per1)
+        logper2 = np.log(per2)
+        logprad1 = np.log(prad1)
+        logprad2 = np.log(prad2)
+        opts={'epsabs':1e-3,'epsrel':1e-3}
+        limits = [[logper1, logper2],[logprad1,logprad2]]
+        area = (logper2-logper1) * (logprad2-logprad1)
+        kw = dict(full_output=True,opts=opts)
+
+        def _prob_det(logper, logprad):
+            per = np.exp(logper)
+            prad = np.exp(logprad)
+            prob_det = self.prob_det(per,prad,method='interp')
+            return prob_det
+
+        def _prob_trdet(logper, logprad):
+            prob_det = _prob_det(logper, logprad)
+            prob_tr = self.prob_tr(np.exp(logper))
+            prob_trdet = prob_det * prob_tr
+            return prob_trdet
+
+        res = scipy.integrate.nquad(_prob_trdet, limits, **kw)
+        prob_trdet_mean = res[0] / area
+        res = scipy.integrate.nquad(_prob_det, limits, **kw)
+        prob_det_mean = res[0] / area
+        return prob_trdet_mean, prob_det_mean
+
 
 class Occurrence(object):
     """
@@ -632,6 +658,10 @@ def binomial_rate(n, k):
     Args:
         n (float): number of trials
         k (float): number of sucesses
+
+    Returns
+        rate (float): rate
+        rate_err1(float): rate
     """
     n = float(n)
     k = float(k)
@@ -653,6 +683,12 @@ def binomial_rate(n, k):
         pdf /= pdf.sum()
         stats = pd.DataFrame(dict(ratei=ratei,pdf=pdf))
         rate, rate_err1, rate_err2  = confidence_interval(ratei, pdf, rate)
+        scdf = InterpolatedUnivariateSpline(
+            np.array(stats.ratei),np.array(stats.pdf.cumsum())
+        )
+        obj = lambda rate : scdf(rate) - quantile_uplim
+        rate_ul = newton(obj,rate,maxiter=100)
+
     else:
         # Non-detection, upper limit on rate.
         maxrate = min(1, 10 / n)
@@ -668,6 +704,91 @@ def binomial_rate(n, k):
 
     return rate, rate_err1, rate_err2, rate_ul, stats
 
+
+def sum_cells(ntrial, nplnt):
+    """
+    Add the occurrence values from different cells.
+
+    Args:
+        nplnt (arary): number of planets detected
+    """
+
+    ntrial = np.array(ntrial)
+    nplnt = np.array(nplnt)
+    nsample = int(1e4)
+
+    samplesL = []
+    for i in range(len(nplnt)):
+        binom = Binomial(ntrial[i], nplnt[i])
+        samplesL.append(binom.sample(nsample))
+
+    samplesL = np.vstack(samplesL)
+    isuplim = (nplnt==0) # True if cell yields upper limit
+    
+
+    samples_sum = samplesL[~isuplim].sum(0)
+    d = {}
+    d = dict(rate=None, rate_err1=None, rate_err2=None, rate_ul=None)
+
+    # All measurements are upper limits
+    if (nplnt==0).all():
+        samples_sum = samplesL.sum(0)
+        p16, p50, p84, p90 = np.percentile(samples_sum, [16,50,84,90])
+        d['rate_ul'] = p90
+    else:
+        samples_sum = samplesL[~isuplim].sum(0)
+        p16, p50, p84, p90 = np.percentile(samples_sum, [16,50,84,90])
+        d['rate'] = p50
+        d['rate_err1'] = p84 - p50
+        d['rate_err2'] = p16 - p50
+    return d
+
+
+class Binomial(object):
+    def __init__(self, n, k):
+        """
+        Args:
+            n: number of trials
+            k: number of sucesses
+        """
+        self.n = float(n)
+        self.k = float(k)
+        self.npdf = 10000
+        if k!=0:
+            # Detection, calculate pdf of the rate of planets in box
+            rate = 1.0 * k / n
+            self.maxrate = min(1,10*rate)
+        else:
+            # Non-detection, upper limit on rate.
+            self.maxrate = min(1, 10 / self.n)
+
+    def pdf(self):
+        """
+        Returns probabilty of rate r
+        """
+        _rate = np.linspace(0,self.maxrate,self.npdf)
+        _pdf = binom_gamma(_rate,self.n,self.k)
+        _pdf /= _pdf.sum()
+        return _rate, _pdf
+
+    def sample(self, nsamp):
+        rate, pdf = self.pdf()
+        cdf = pdf.cumsum()
+        fp = rate
+        x = np.random.random_sample(nsamp)
+        return interp(x, cdf, rate)
+
+    def hist_samples(self, nsamp, downsamp=10):
+        """
+        Verify that the sampling working
+        """
+        
+        rate, pdf = self.pdf()
+        samples = self.sample(nsamp)
+        weights = ones_like(samples)/nsamp # normalize histogram
+        hist(samples,bins=rate[::downsamp],weights=weights)
+        plot(rate[::downsamp],pdf[::downsamp]*downsamp)
+
 def confidence_interval(x, pdf, xmode, method='hpd'):
     """
     Compute confidence interval from a discrete PDF
@@ -675,8 +796,11 @@ def confidence_interval(x, pdf, xmode, method='hpd'):
     Args:
         x: independent variable
         pdf: independent variable
-    
 
+    Returns:
+        xmode: value of the mode of the posterior
+        x_err1: upper uncert
+        x_err2: lower uncert (negative)
     """
     
     assert np.allclose(pdf.sum(),1.0), "Must normalize PDF"
@@ -700,6 +824,7 @@ def combine_cells(df, plot_diag=False):
 
     For a given set of cells, combine the occurrence rates using a
     convolution of the PDFs from the binomial distribution.
+
 
     If there are no detections, compute an upper limit on the
     occurrence rate by assuming that planet occurrence is constant in
