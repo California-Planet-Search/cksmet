@@ -22,6 +22,9 @@ def main():
     subpsr = psr.add_subparsers(title="subcommands", dest='subcommand')
     psr_parent = ArgumentParser(add_help=False)
 
+    psr_cal = subpsr.add_parser('calibrate-lamo', parents=[psr_parent])
+    psr_cal.set_defaults(func=calibrate_lamo)
+
     psr_stats = subpsr.add_parser('stats', parents=[psr_parent])
     psr_stats.set_defaults(func=stats)
 
@@ -30,9 +33,6 @@ def main():
 
     psr_paper = subpsr.add_parser('update-paper', parents=[psr_parent])
     psr_paper.set_defaults(func=update_paper)
-
-    psr_cal = subpsr.add_parser('calibrate-lamo', parents=[psr_parent])
-    psr_cal.set_defaults(func=calibrate_lamo)
 
     args = psr.parse_args()
     args.func(args)
@@ -99,5 +99,4 @@ def update_paper(args):
         
 if __name__=="__main__":
     main()
-
 

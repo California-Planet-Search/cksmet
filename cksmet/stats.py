@@ -1,7 +1,6 @@
 """
 Module for statistics
 """
-
 class Binomial(object):
     def __init__(self, n, k):
         """
@@ -58,7 +57,6 @@ def binom_gamma(p, n, k):
     _logpdf = combiln + special.xlogy(k, p) + special.xlog1py(n-k, -p)
     _pdf = np.exp(_logpdf)
     return _pdf
-
 
 def sum_cells(ntrial, nplnt):
     """
