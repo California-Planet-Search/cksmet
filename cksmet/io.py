@@ -85,8 +85,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         fn = os.path.join(DATADIR,'lamost-dr2-cal.hdf')
         df = pd.read_hdf(fn, 'lamost-dr2-cal')
 
-
-
     elif table=='cks':
         df = pd.read_csv('../CKS-Physical/data/cks_physical_merged.csv')
 
@@ -95,8 +93,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         lamost = load_table('lamost-dr2',cache=1)
         df = pd.merge(lamost,cks,on='id_kic')
         return df
-
-
 
     elif table=='cks-cuts':
         df =  cksphys.io.load_table(
@@ -161,6 +157,11 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
                 qobs=0
             df['tobs'] += qobs * long_cadence_day * lc_per_quarter[q]
 
+    elif table=='occur-bins-2':
+        df = cksmet.analysis2.compute_binned_occurrence()
+    elif table=='occur-bins-5':
+        smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
+        df = cksmet.analysis2.compute_binned_occurrence(smet_bins=smet_bins)
     else:
         assert False, "table {} not valid table name".format(table)
     return df
@@ -188,7 +189,6 @@ def sub_prefix(df, prefix,ignore=['id']):
             namemap[col] = col.replace(prefix,'') 
     df = df.rename(columns=namemap)
     return df
-
 
 def split_err(sval):
     """Parse the double-sided errors from hadden""" 
