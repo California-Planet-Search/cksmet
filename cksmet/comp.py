@@ -1,6 +1,14 @@
 """
 Completeness class
 """
+import numpy as np
+import pandas as pd
+from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
+import scipy.integrate
+from astropy import constants as c
+from astropy import units as u
+
+from matplotlib.pylab import * 
 
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
