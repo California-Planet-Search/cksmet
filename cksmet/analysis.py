@@ -1,24 +1,26 @@
-# Load up the culled CKS sample.
-import cksmet.occur2
-import cksmet.occur
-import cksmet.io
 import pandas as pd 
 
-def compute_binned_occurrence(smet_bins=[-1.0, 0, 0.5]):
+import cksmet.occur
+import cksmet.io
+import cksmet.grid
+import cksmet.comp
+
+def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     print "Initializing completeness object"
     field = cksmet.io.load_table('field-cuts',cache=1)
     field = field.query('~isany')
     field = field.rename(columns={'huber_srad':'srad','huber_smass':'smass'})
     field.index = field.id_kic
-    per_bins = cksmet.grid.per_bins_dict['xfine']
-    prad_bins = cksmet.grid.prad_bins_dict['xfine']
-    bins_dict = {'per': per_bins,'prad': prad_bins}
+
+    comp_per_bins = cksmet.grid.per_bins_dict['xfine']
+    comp_prad_bins = cksmet.grid.prad_bins_dict['xfine']
+    comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
     spacing_dict = {'per':'log','prad':'log'}
-    grid = cksmet.grid.Grid(bins_dict,spacing_dict)
+    grid = cksmet.grid.Grid(comp_bins_dict,spacing_dict)
 
     prob_det_mes_name = 'step-%i' % 12
     impact_transit = 0.9
-    comp = cksmet.occur.Completeness(
+    comp = cksmet.comp.Completeness(
         field, grid, prob_det_mes_name, impact_transit 
     )
     comp.mesfac = 1
@@ -41,11 +43,9 @@ def compute_binned_occurrence(smet_bins=[-1.0, 0, 0.5]):
     lamo = lamo[~lamo.isany]
     smet_field = lamo.lamo_smet
     nstars = 35369.0
-    occur = cksmet.occur2.Occurrence(plnt, comp, nstars, smet_field=smet_field)
+    occur = cksmet.occur.Occurrence(plnt, comp, nstars, smet_field=smet_field)
 
     print "Define occurrence grid"
-    per_bins = cksmet.grid.per_bins_dict['four-per-decade']
-    prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
 
     bins_dict = {'per': per_bins,'prad': prad_bins,'smet':smet_bins}
     spacing_dict = {'per':'log','prad':'log','smet':'linear'}
@@ -74,4 +74,7 @@ def compute_binned_occurrence(smet_bins=[-1.0, 0, 0.5]):
             _print_row(out)
 
     out = pd.DataFrame(out)
+    for k in 'per1 perc per2 prad1 pradc prad2 smet1 smetc smet2'.split():
+        out[k+'r'] = out[k].round(decimals=1)
+
     return out
