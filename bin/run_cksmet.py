@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 import glob
 import os
 
-import pandas as pd
+#import pandas as pd
 from matplotlib.pylab import *
 
 import cksphys.iso
@@ -22,17 +22,20 @@ def main():
     subpsr = psr.add_subparsers(title="subcommands", dest='subcommand')
     psr_parent = ArgumentParser(add_help=False)
 
-    psr_cal = subpsr.add_parser('calibrate-lamo', parents=[psr_parent])
-    psr_cal.set_defaults(func=calibrate_lamo)
+    psr2 = subpsr.add_parser('calibrate-lamo', parents=[psr_parent])
+    psr2.set_defaults(func=calibrate_lamo)
 
-    psr_stats = subpsr.add_parser('stats', parents=[psr_parent])
-    psr_stats.set_defaults(func=stats)
+    psr2 = subpsr.add_parser('calc-occur', parents=[psr_parent])
+    psr2.set_defaults(func=calc_occur)
 
-    psr_plots = subpsr.add_parser('create-plots', parents=[psr_parent], )
-    psr_plots.set_defaults(func=create_plots)
+    psr2 = subpsr.add_parser('stats', parents=[psr_parent])
+    psr2.set_defaults(func=stats)
 
-    psr_paper = subpsr.add_parser('update-paper', parents=[psr_parent])
-    psr_paper.set_defaults(func=update_paper)
+    psr2 = subpsr.add_parser('create-plots', parents=[psr_parent], )
+    psr2.set_defaults(func=create_plots)
+
+    psr2 = subpsr.add_parser('update-paper', parents=[psr_parent])
+    psr2.set_defaults(func=update_paper)
 
     args = psr.parse_args()
     args.func(args)
@@ -49,6 +52,14 @@ def calibrate_lamo(args):
     gcf().savefig('fig_lamo-on-cks.pdf')
     #cksspec.plotting.compare.comparison_three('cks-lamo')
     #gcf().savefig('fig_sm-sx.pdf')
+
+
+def calc_occur(args):
+    import cksmet.io
+    print "calc occur"
+    df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=2)
+    df = cksmet.io.load_table('occur-nsmet=5',cache=2)
+    df = cksmet.io.load_table('occur-nsmet=2',cache=2)
 
 def create_plots(args):
     import cksmet.plotting.smet
