@@ -90,3 +90,8 @@ def load_occur(cachefn=None,cache=0,smetbin=None):
             print "saving {} ".format(cachefn)
         
     return occ
+
+
+
+
+
