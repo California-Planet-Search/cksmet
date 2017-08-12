@@ -78,3 +78,5 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
         out[k+'r'] = out[k].round(decimals=1)
 
     return out
+
+

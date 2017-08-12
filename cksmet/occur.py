@@ -67,11 +67,16 @@ class Occurrence(object):
         )
         ntrial = nstars * prob_trdet_mean
         rate = nplnt / ntrial
-        out['rate'] = rate
+
+        nsample = int(1e4)
+        binom = Binomial(ntrial, nplnt)
+        samples = binom.sample(nsample) 
+        rate = cksmet.stats.samples_to_rate(samples)
         out['ntrial'] = ntrial
         out['nplnt'] = nplnt
         out['prob_trdet_mean'] = prob_trdet_mean
         out['prob_det_mean'] = prob_det_mean
+        out = dict(out,**rate)
         return out
 
 

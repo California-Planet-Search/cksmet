@@ -77,7 +77,6 @@ def sum_cells(ntrial, nplnt):
 
     samplesL = np.vstack(samplesL)
     isuplim = (nplnt==0) # True if cell yields upper limit
-    
 
     samples_sum = samplesL[~isuplim].sum(0)
     d = {}
@@ -85,8 +84,17 @@ def sum_cells(ntrial, nplnt):
 
     # All measurements are upper limits
     if (nplnt==0).all():
-        samples_sum = samplesL.sum(0)
-        p16, p50, p84, p90 = np.percentile(samples_sum, [16,50,84,90])
+        samples = samplesL.sum(0)
+        d = samples_to_rate(samples,uplim=True)
+    else:
+        samples = samplesL[~isuplim].sum(0)
+        d = samples_to_rate(samples,uplim=True)
+    return d
+
+def samples_to_rate(samples, uplim=False):
+    d = dict(rate=None, rate_err1=None, rate_err2=None, rate_ul=None)
+    if uplim:
+        p16, p50, p84, p90 = np.percentile(samples, [16,50,84,90])
         d['rate_ul'] = p90
     else:
         samples_sum = samplesL[~isuplim].sum(0)
@@ -95,4 +103,3 @@ def sum_cells(ntrial, nplnt):
         d['rate_err1'] = p84 - p50
         d['rate_err2'] = p16 - p50
     return d
-
