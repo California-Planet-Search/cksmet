@@ -73,10 +73,10 @@ class Grid(object):
             ds.coords[sbin] = self.binsc[sbin]
 
         for key in self.bins.keys():
-            coord = {key: self.binsc[key]}
-            ds[key+'c'] = xr.DataArray(self.binsc[key],coord)
-            ds[key+'1'] = xr.DataArray(self.bins1[key],coord)
-            ds[key+'2'] = xr.DataArray(self.bins2[key],coord)
+            kw = dict(coords=[self.binsc[key]],dims = [key])
+            ds[key+'c'] = xr.DataArray(self.binsc[key],**kw)
+            ds[key+'1'] = xr.DataArray(self.bins1[key],**kw)
+            ds[key+'2'] = xr.DataArray(self.bins2[key],**kw)
 
         # This line makes all data variables 2D
         ds = ds.to_dataframe().to_xarray()
