@@ -1,5 +1,4 @@
 import os
-from collections import Iterable
 
 import pandas as pd
 import numpy as np
@@ -13,6 +12,8 @@ from cpsutils.pdplus import LittleEndian
 import cksmet.cuts
 import cksphys.io
 import cksspec.io
+import cksmet.grid
+import cksmet.analysis
 
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
@@ -157,11 +158,29 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
                 qobs=0
             df['tobs'] += qobs * long_cadence_day * lc_per_quarter[q]
 
-    elif table=='occur-bins-2':
-        df = cksmet.analysis2.compute_binned_occurrence()
-    elif table=='occur-bins-5':
+    elif table=='occur-nsmet=5':
+        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
+        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
         smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
-        df = cksmet.analysis2.compute_binned_occurrence(smet_bins=smet_bins)
+        df = cksmet.analysis.compute_binned_occurrence(
+            per_bins, prad_bins, smet_bins
+        )
+    elif table=='occur-nsmet=5':
+        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
+        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
+        smet_bins = [-1, 0, 0.5] 
+        df = cksmet.analysis.compute_binned_occurrence(
+            per_bins, prad_bins, smet_bins
+        )
+
+    elif table=='occur-nper=2-nsmet=5':
+        per_bins = [1, 10, 100]
+        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
+        smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
+        df = cksmet.analysis.compute_binned_occurrence(
+            per_bins, prad_bins, smet_bins
+        )
+
     else:
         assert False, "table {} not valid table name".format(table)
     return df
