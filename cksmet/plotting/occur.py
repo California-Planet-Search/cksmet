@@ -2,12 +2,14 @@ from matplotlib.pylab import *
 import xarray as xr
 import seaborn as sns
 sns.set_style('ticks')
+sns.set_color_codes()
 import matplotlib.patheffects as path_effects
 import cksmet.analysis
 import cksmet.occur
 from cksmet.grid import *
 from matplotlib.transforms import blended_transform_factory as btf
-
+import lmfit
+from lmfit import Parameters
 
 def load_occur():
     smetbins = [
@@ -420,35 +422,193 @@ smetbins = [
 ]
 
 
-def occur_smet_fourpanel():
+def binned_period(df, **kwargs):
+    kw = dict(fmt='_',mew=2,ms=7,capsize=2,**kwargs)
+    i_count = 0 
+    for i, row in df.iterrows():
+        if i_count!=0:
+            kw['label']=None
+        i_count+=1
+
+        rate, rate_err1, rate_err2, rate_ul, stats = \
+            cksmet.occur.binomial_rate(row.ntrial, row.nplnt)
+        #print row.nplnt, row.ntrial,rate, rate_err1, rate_err2, rate_ul
+        if row.nplnt > 1:
+            yerr = [[-rate_err1],[rate_err2]] 
+            errorbar([row.perc],rate,yerr=yerr,**kw)
+        else:
+            errorbar([row.perc],rate_ul,yerr=rate_ul*0.2,uplims=True,**kw)
+            
+    xlabel('Orbital Period (days)')
+    ylabel('Planets Per Star')
+
+
+def binned_smet(df, **kwargs):
+    """
+    Plot occurrence as function of smet.
     """
 
-    """
+    kw = dict(fmt='o',mew=2,ms=7,capsize=2,**kwargs)
+    i_count = 0 
+    for i, row in df.iterrows():
+        if i_count!=0:
+            kw['label']=None
+        i_count+=1
 
-    test = xr.open_dataset('data/test.nc') 
-    fig,axL = subplots(nrows=2,ncols=2)
-    axL = axL.flatten()
-    
-    for i, smetbin in enumerate(smetbins):
-        sca(axL[i])
-        loglog()
+        rate, rate_err1, rate_err2, rate_ul, stats = \
+            cksmet.occur.binomial_rate(row.ntrial, row.nplnt)
+
+        if row.nplnt > 0:
+            yerr = [[-rate_err1],[rate_err2]] 
+            errorbar([row.smetc],rate,yerr=yerr,**kw)
+        else:
+            errorbar([row.smetc],rate_ul,yerr=rate_ul*0.2,uplims=True,**kw)
+            
+    xlabel('[Fe/H] (dex)')
+    ylabel('Planets Per Star')
+
+prob_det_mean = 0.25 
+
+def period(mode, fit=True,mcmc=False):
+    df = cksmet.io.load_table('occur-bins-2',cache=1)
+    loglog()
+    df = df[(df.prob_det_mean > prob_det_mean) & (df.perc < 1000)]
+
+    if mode=='se-sub':
+        cut = df[
+            df.pradc.between(1,1.7) & 
+            df.smetc.between(-1,0) 
+        ]
+        color='b'
+        label='[Fe/H] < 0'
+        ha = 'left'
+
+    elif mode=='se-sup':
+        cut = df[
+            df.pradc.between(1,1.7) & 
+            df.smetc.between(-0,0.5) 
+        ]
+        color='r'
+        label='[Fe/H] > 0'
+        ha = 'right'
+
+
+    elif mode=='sn-sub':
+        cut = df[
+            df.pradc.between(1.7,4.0) & 
+            df.smetc.between(-1,0) 
+        ]
+        color='b'
+        label='[Fe/H] < 0'
+        ha = 'left'
         
-        smet0 = smetbin[0]
-        smet1 = smetbin[1]
-        dscut = test.where(( smet0 < test.smet) & (test.smet < smet1))
-        dscut2d = dscut.sum(dim=['smet'])
-        dscut2d.plnt_occur.plot.imshow(vmax=0.03)
+    elif mode=='sn-sup':
+        cut = df[
+            df.pradc.between(1.7,4.0) & 
+            df.smetc.between(-0,0.5) 
+        ]
+        color='r'
+        label='[Fe/H] > 0'
+        ha = 'right'
 
-        _title = '[Fe/H] = $\mathregular{{ {0:+.2f} - {1:+.2f} }}$'.format(*smetbin)
-        title(_title)
-    
-    setp(axL,xlim=(1,300))
+    elif mode=='ss-sub':
+        cut = df[
+            df.pradc.between(4.0,8.0) & 
+            df.smetc.between(-1,0.0) 
+        ]
+        color='b'
+        label='[Fe/H] > 0'
+        ha = 'right'
 
-    yt = [0.5, 1, 2, 4, 8, 16, 32]
-    xt = [1, 3, 10, 30, 100, 300]
-    for ax in axL:
-        sca(ax)
-        yticks(yt,yt)
-        xticks(xt,xt)
+    elif mode=='ss-sup':
+        cut = df[
+            df.pradc.between(4.0,8.0) & 
+            df.smetc.between(-0,0.5) 
+        ]
+        color='r'
+        label='[Fe/H] < 0'
+        ha = 'right'
+    elif mode=='jup-sub':
+        cut = df[
+            df.pradc.between(8.0,22.0) & 
+            df.smetc.between(-1,0.0) 
+        ]
+        color='b'
+        label='[Fe/H] > 0'
+        ha = 'right'
+
+    elif mode=='jup-sup':
+        cut = df[
+            df.pradc.between(8.0,22.0) & 
+            df.smetc.between(-0,0.5) 
+        ]
+        color='r'
+        label='[Fe/H] < 0'
+        ha = 'right'
+
+
+    else:
+        assert False, "mode {} not supported".format(mode)
         
+    binned_period(cut,color=color,label=label)   
+
+    if fit:
+        p = Parameters()
+        p.add('kp',value=0.06,vary=True,min=0,max=1)
+        p.add('beta',value=0.28,vary=True)
+        p.add('per0',value=7,vary=True,min=0,max=100)
+        p.add('gamma',value=2,vary=True)
+        perc = np.array(cut.perc)
+        nplnt = np.array(cut.nplnt)
+        ntrial = np.array(cut.ntrial)
+
+        def loglike(params):
+            _loglike = cksmet.model.loglike_powerlaw_and_cutoff(params, perc, nplnt, ntrial)
+            return _loglike 
+
+        def negloglike(params):
+            return -1.0 * loglike(params)
+
+        negloglike(p)
+        res = lmfit.minimize(negloglike,p,method='Nelder')
+        #lmfit.report_fit(res)
+        perci = logspace(log10(1),log10(300),300)
+
+        fit = cksmet.model.powerlaw_and_cutoff(res.params, perci)
+        plot(perci,fit,color=color)
+        axvline(res.params['per0'],color=color,ls='--',lw=1)
+        ax = gca()
+        trans = btf(ax.transData, ax.transAxes) 
+        s = "P = {:.1f} days".format(res.params['per0'].value)
+        text(res.params['per0'],0.925,s, color=color,rotation=90, transform=trans, ha=ha,size='medium')
+
+    if mcmc:
+        mini = lmfit.Minimizer(loglike, res.params)
+        res_emcee = mini.emcee(
+            burn=300, steps=600, thin=1, nwalkers=300, params=res.params, seed=1
+        )
+        res_emcee.flatchain.to_hdf('mcmc.hdf',mode)
+
+from matplotlib.transforms import blended_transform_factory as btf
+
+def fig_per_small():
+    fig,axL = subplots(ncols=2,figsize=(10,4),sharex=True,sharey=True)
+    sca(axL[0])
+    cksmet.plotting.occur.period('se-sub')
+    cksmet.plotting.occur.period('se-sup')
+    legend(frameon=True)
+
+    sca(axL[1])
+    cksmet.plotting.occur.period('sn-sub')
+    cksmet.plotting.occur.period('sn-sup')
+
     fig.set_tight_layout(True)
+
+    xt = [1,3,10,30,100,300]
+    xticks(xt,xt)
+    xlim(1,300)
+    ylim(3e-4,3e-1)
+    ylim(3e-4,1)
+    fig.savefig('fig_occur-per-small.pdf')
+    #cksmet.plotting.occur.period_sn()
+
