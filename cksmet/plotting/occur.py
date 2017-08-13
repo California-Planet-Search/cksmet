@@ -468,6 +468,7 @@ def binned_smet(df, **kwargs):
     ylabel('Planets Per Star')
 
 prob_det_mean = 0.25 
+import cksmet.model
 
 def period(mode, fit=True,mcmc=False):
     df = cksmet.io.load_table('occur-bins-2',cache=1)
@@ -491,7 +492,6 @@ def period(mode, fit=True,mcmc=False):
         color='r'
         label='[Fe/H] > 0'
         ha = 'right'
-
 
     elif mode=='sn-sub':
         cut = df[
@@ -589,6 +589,10 @@ def period(mode, fit=True,mcmc=False):
         )
         res_emcee.flatchain.to_hdf('mcmc.hdf',mode)
 
+
+
+
+
 from matplotlib.transforms import blended_transform_factory as btf
 
 def fig_per_small():
@@ -611,4 +615,119 @@ def fig_per_small():
     ylim(3e-4,1)
     fig.savefig('fig_occur-per-small.pdf')
     #cksmet.plotting.occur.period_sn()
+
+import pandas as pd 
+
+def smet(mode, fit=True, **kw):
+    df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=1)
+    dist = pd.DataFrame(index=[1.0,10,],data=['hot','warm'],columns=['dist'])
+    size = pd.DataFrame(index=[1.0,1.7,4.0,8.0],data=['se','sn','ss','jup',],columns=['size'])
+    df = pd.merge(df,dist,left_on='per1',right_index=True)
+    df = pd.merge(df,size,left_on='prad1',right_index=True)
+    df.set_index(['dist', 'size'], inplace=True)
+
+    dist,size = mode.split('-')
+    cut = df.ix[dist,size]
+
+    cut = cut[cut.smetc.between(-0.4,0.4)]
+    yerr = np.array(cut['rate_err2 rate_err1'.split()]).T
+    yerr[0] *= -1 
+
+    semilogy()
+    errorbar(cut.smetc,cut.rate,yerr=yerr,fmt='o',**kw)
+
+    if kw.has_key('label'):
+        kw['label'] = ''
+    
+    plot(cut.smetc,cut.rate_ul,marker='v',lw=0,**kw)
+
+    if fit:
+        p = Parameters()
+        p.add('kp',value=0.06,vary=True,min=0,max=1)
+        p.add('beta',value=0.28,vary=True)
+        smet = np.array(cut.smetc)
+        nplnt = np.array(cut.nplnt)
+        ntrial = np.array(cut.ntrial)
+
+        func = cksmet.model.smet_exponential
+        def loglike(params):
+            _loglike = cksmet.model.loglike_1d(
+                params, func, smet, nplnt, ntrial
+            )
+            return _loglike 
+
+        def negloglike(params):
+            return -1.0 * loglike(params)
+
+        negloglike(p)
+        res = lmfit.minimize(negloglike,p,method='Nelder')
+        lmfit.report_fit(res)
+        smeti = linspace(-0.4,0.4,300)
+
+        fit = func(res.params, smeti)
+        plot(smeti,fit,color=kw['color'])
+
+
+
+def fig_smet_small2():
+    fig, axL = subplots(ncols=2,sharey=True,figsize=(8.5,6),sharex=True)
+
+    sca(axL[0]) # Hot SE
+    smet('hot-se',color='g',label='Hot Super-Earths')
+
+    sca(axL[0]) # Hot SN
+    smet('hot-sn',color='b',label='Hot Sub-Neptunes')
+    legend()
+
+    sca(axL[1]) # Warm SE
+    smet('warm-se',color='g',label='Warm Super-Earths')
+
+    sca(axL[1]) # Warm SN
+    smet('warm-sn',color='b',label='Warm Sub-Neptunes')
+    ylim(3e-3,5e-1)
+
+    xlim(-0.4,0.4)
+    ylim()
+
+
+
+def fig_smet_large():
+    fig, axL = subplots(ncols=2,sharey=False,figsize=(8.5,4),sharex=True)
+
+    sca(axL[0]) # Hot SE
+    smet('hot-jup')
+
+    sca(axL[1]) # Warm SE
+    smet('warm-ss')
+
+    xlim(-0.4,0.4)
+
+
+def fig_smet_hot_small():
+    fig, axL = subplots()
+    smet('hot-se',color='g',label='Hot Super-Earths')
+    smet('hot-sn',color='b',label='Hot Sub-Neptunes')
+    legend()
+
+def fig_smet_warm_small():
+    fig, axL = subplots(figsize=(4,3))
+    smet('warm-se',color='g',label='Warm Super-Earths')
+    smet('warm-sn',color='b',label='Warm Sub-Neptunes')
+    legend()
+    xlim(-0.4,0.4)
+    ylim(1e-1,6e-1)
+    xlabel('Metallicty')
+    ylabel('Planets Per Star')
+
+def fig_smet_hot_small():
+    fig, axL = subplots(figsize=(4,3))
+    smet('hot-se',color='g',label='Hot Super-Earths')
+    smet('hot-sn',color='b',label='Hot Sub-Neptunes')
+    legend()
+    xlim(-0.4,0.4)
+    ylim(1e-3,1e-1)
+    xlabel('Metallicty')
+    ylabel('Planets Per Star')
+    
+
 

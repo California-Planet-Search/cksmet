@@ -1,7 +1,10 @@
 """
 Module for statistics
 """
+from scipy.special import gammaln as gamln
+from scipy import special
 
+import numpy as np
 class Binomial(object):
     def __init__(self, n, k):
         """
@@ -34,7 +37,7 @@ class Binomial(object):
         cdf = pdf.cumsum()
         fp = rate
         x = np.random.random_sample(nsamp)
-        return interp(x, cdf, rate)
+        return np.interp(x, cdf, rate)
 
     def hist_samples(self, nsamp, downsamp=10):
         """
@@ -59,7 +62,6 @@ def binom_gamma(p, n, k):
     _pdf = np.exp(_logpdf)
     return _pdf
 
-
 def sum_cells(ntrial, nplnt):
     """
     Add the occurrence values from different cells.
@@ -79,7 +81,6 @@ def sum_cells(ntrial, nplnt):
 
     samplesL = np.vstack(samplesL)
     isuplim = (nplnt==0) # True if cell yields upper limit
-    
 
     samples_sum = samplesL[~isuplim].sum(0)
     d = {}
@@ -87,14 +88,23 @@ def sum_cells(ntrial, nplnt):
 
     # All measurements are upper limits
     if (nplnt==0).all():
-        samples_sum = samplesL.sum(0)
-        p16, p50, p84, p90 = np.percentile(samples_sum, [16,50,84,90])
-        d['rate_ul'] = p90
+        samples = samplesL.sum(0)
+        d = samples_to_rate(samples,uplim=True)
     else:
-        samples_sum = samplesL[~isuplim].sum(0)
-        p16, p50, p84, p90 = np.percentile(samples_sum, [16,50,84,90])
+        samples = samplesL[~isuplim].sum(0)
+        d = samples_to_rate(samples,uplim=True)
+    return d
+
+def samples_to_rate(samples, uplim=False):
+    d = dict(rate=None, rate_err1=None, rate_err2=None, rate_ul=None)
+    if uplim:
+        p16, p50, p84, p90 = np.percentile(samples, [16,50,84,90])
+        d['rate_ul'] = p90
+        d['rate_str'] = "< {rate_ul:.4f} (90%)".format(**d)
+    else:
+        p16, p50, p84, p90 = np.percentile(samples, [16,50,84,90])
         d['rate'] = p50
         d['rate_err1'] = p84 - p50
         d['rate_err2'] = p16 - p50
+        d['rate_str'] = "{rate:.4f} +/- {rate_err1:.4f}/{rate_err2:.4f}".format(**d)
     return d
-
