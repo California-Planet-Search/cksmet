@@ -165,7 +165,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = cksmet.analysis.compute_binned_occurrence(
             per_bins, prad_bins, smet_bins
         )
-    elif table=='occur-nsmet=5':
+    elif table=='occur-nsmet=2':
         per_bins = cksmet.grid.per_bins_dict['four-per-decade']
         prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
         smet_bins = [-1, 0, 0.5] 

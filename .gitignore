@@ -4,3 +4,4 @@ data/
 *.png
 *.ipynb
 *.pkl
+paper/
