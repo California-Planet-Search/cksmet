@@ -2,20 +2,8 @@
 from argparse import ArgumentParser
 import glob
 import os
-
-#import pandas as pd
 from matplotlib.pylab import *
-
-import cksphys.iso
-import cksphys.io
-import cksphys.calc
-import cksphys._isoclassify
-import cksphys._isochrones
-import cksphys.plotting.compare
-import cksphys.plotting.hr_diagram
-
-from cksphys.config import ISO_CSVFN
-import cksphys.tables
+import cPickle as pickle
 
 def main():
     psr = ArgumentParser()
@@ -24,6 +12,9 @@ def main():
 
     psr2 = subpsr.add_parser('calibrate-lamo', parents=[psr_parent])
     psr2.set_defaults(func=calibrate_lamo)
+
+    psr2 = subpsr.add_parser('calc-comp', parents=[psr_parent])
+    psr2.set_defaults(func=calc_comp)
 
     psr2 = subpsr.add_parser('calc-occur', parents=[psr_parent])
     psr2.set_defaults(func=calc_occur)
@@ -53,6 +44,15 @@ def calibrate_lamo(args):
     #cksspec.plotting.compare.comparison_three('cks-lamo')
     #gcf().savefig('fig_sm-sx.pdf')
 
+def calc_comp(args):
+    import cksmet.analysis
+    import cksmet.io
+    comp = cksmet.analysis.calc_completeness()
+    fn = cksmet.io.COMPLETENESS_FILE
+    print "computing completeness"
+    with open(fn,'w') as f:
+        pickle.dump(comp,f)
+        print "saved {}".format(fn) 
 
 def calc_occur(args):
     import cksmet.io

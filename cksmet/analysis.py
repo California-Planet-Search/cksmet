@@ -5,8 +5,7 @@ import cksmet.io
 import cksmet.grid
 import cksmet.comp
 
-def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
-    print "Initializing completeness object"
+def calc_completeness():
     field = cksmet.io.load_table('field-cuts',cache=1)
     field = field.query('~isany')
     field = field.rename(columns={'huber_srad':'srad','huber_smass':'smass'})
@@ -27,8 +26,11 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     comp.compute_grid_prob_det()
     comp.compute_grid_prob_tr()
     comp.init_prob_det_interp()
+    return comp
 
+def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     print "Initializing occurrence object"
+    comp = cksmet.io.load_comp()
     cks = cksmet.io.load_table('cks-cuts')
     cks = cks[~cks.isany]
     cks = cks.dropna(subset=['iso_prad'])
@@ -59,7 +61,7 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
         s+="per={per1:.1f}-{per2:.1f}, "
         s+="prad={prad1:.1f}-{prad2:.1f}, "
         s+="smet={smet1:.1f}-{smet2:.1f}, "
-        s+="rate={rate:.4f} "
+        s+="rate={rate_str:s} "
         s = s.format(**_out)
         print s 
 
@@ -69,7 +71,6 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
         _out = dict(row, **_out)
         out.append(_out)
         i_count+=1
-
         if i_count%10==0:
             _print_row(out)
 

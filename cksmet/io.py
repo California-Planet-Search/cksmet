@@ -1,4 +1,5 @@
 import os
+import cPickle as pickle
 
 import pandas as pd
 import numpy as np
@@ -6,9 +7,7 @@ from scipy.io import idl
 from astropy.io import fits 
 from astropy import constants as c 
 from astropy import units as u
-from astropy.table import Table
 
-from cpsutils.pdplus import LittleEndian
 import cksmet.cuts
 import cksphys.io
 import cksspec.io
@@ -17,6 +16,7 @@ import cksmet.analysis
 
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
+COMPLETENESS_FILE = os.path.join(DATADIR, 'comp.pkl')
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     """Load tables used in cksphys
@@ -209,26 +209,10 @@ def sub_prefix(df, prefix,ignore=['id']):
     df = df.rename(columns=namemap)
     return df
 
-def split_err(sval):
-    """Parse the double-sided errors from hadden""" 
-    try:
-        istart = sval.index('$')
-        istop = sval.index('^')
-        val = sval[istart+1:istop]
-        sval = sval[istop+1:]
-
-        istart = sval.index('{')
-        istop = sval.index('}')
-        err1 = sval[istart+1:istop]
-        sval = sval[istop+1:]
-
-        istart = sval.index('{')
-        istop = sval.index('}')
-        err2 = sval[istart+1:istop]
-    except ValueError:
-        val, err1, err2 = None, None, None
-    return val, err1, err2
-
+def load_comp():
+    with open(COMPLETENESS_FILE,'r') as f:
+        comp = pickle.load(f)
+    return comp
 
 def table_bin(df, bins, key):
     g = df.groupby(pd.cut(df.iso_prad,bins=bins))
@@ -262,51 +246,6 @@ def latex_table(table):
             line = line.format(**row)
             print line
 
-
-
-def load_pairs(generate_csv=False):
-    pairsfn = 'data/pairs.csv'
-    if os.path.exists(pairsfn):
-        if not generate_csv:
-            print "reading {}".format(pairsfn)
-            pairs = pd.read_csv(pairsfn)
-            return pairs
-    cks = load_table('cks')
-    cks.index = cks.kepid
-    cks = cks.query('nplanets > 1')
-    cks = cks.sort_values(by=['kepid','koi_period'])
-    pairs = []
-    
-    cols_each = 'kepoi_name koi_period iso_prad smax'.split()
-    cols_both = 'cks_smet nplanets mass'.split()
-    
-    irow = 0 
-    for kepid in cks.kepid.drop_duplicates():
-        nplanets = cks.ix[kepid,'nplanets'].iloc[0]
-        i = 0
-        while i < nplanets-1:
-            row = dict(cks.ix[kepid].iloc[i][cols_both])
-            inner = dict(cks.ix[kepid].iloc[i])
-            inner['i_planet'] = i+1
-            outer = dict(cks.ix[kepid].iloc[i+1])
-            outer['i_planet'] = i+2
-
-            for c in cols_each:
-                row['inner_'+c] = inner[c]
-                row['outer_'+c] = outer[c]
-
-            pairs.append(row)
-            i+=1
-
-        if (irow % 100)==0:
-            print irow
-
-        irow+=1
-
-    pairs = pd.DataFrame(pairs)
-    pairs.to_csv(pairsfn)
-    return pairs
-
 # Pulled from Kepler data characteristics
 lc_per_quarter = {
     0:476,
@@ -329,18 +268,6 @@ lc_per_quarter = {
     17:1556,
 }
 long_cadence_day = 29.7 / 60.0 / 24.0 # long cadence measurement in days
-
-def load_extended_kic():
-    """
-    Load KIC parameters with noise information
-    """
-    #qtbase = np.array(lc_per_quarter.values()) * long_cadence_day
-
-
-    return df 
-
-
-
 
 
 

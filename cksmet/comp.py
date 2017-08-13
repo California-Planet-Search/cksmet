@@ -7,7 +7,6 @@ from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 import scipy.integrate
 from astropy import constants as c
 from astropy import units as u
-
 from matplotlib.pylab import * 
 
 TDUR_EARTH_SUN_HRS = (

@@ -1,23 +1,4 @@
-import numpy as np
-from astropy import units as u
-from astropy import constants as c
-import pandas as pd
-import xarray as xr
-from scipy.interpolate import (
-    RegularGridInterpolator, RectBivariateSpline, interp1d
-)
-from scipy.stats import binom
-from scipy.optimize import newton
-from matplotlib.pylab import * 
-import cksmet.grid
-from scipy.special import gammaln as gamln
-from scipy import special
-from scipy.interpolate import InterpolatedUnivariateSpline
-import scipy.integrate
-
-
-import scipy.integrate
-import numpy as np
+import cksmet.stats
 from statsmodels.distributions.empirical_distribution import ECDF
 
 class Occurrence(object):
@@ -69,15 +50,15 @@ class Occurrence(object):
         rate = nplnt / ntrial
 
         nsample = int(1e4)
-        binom = Binomial(ntrial, nplnt)
+        binom = cksmet.stats.Binomial(ntrial, nplnt)
         samples = binom.sample(nsample) 
-        rate = cksmet.stats.samples_to_rate(samples)
+
+        uplim = nplnt==0
+        rate = cksmet.stats.samples_to_rate(samples,uplim=uplim)
         out['ntrial'] = ntrial
         out['nplnt'] = nplnt
         out['prob_trdet_mean'] = prob_trdet_mean
         out['prob_det_mean'] = prob_det_mean
         out = dict(out,**rate)
         return out
-
-
 

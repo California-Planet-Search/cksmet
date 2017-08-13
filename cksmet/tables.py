@@ -98,7 +98,6 @@ def print_statistics():
         chain = pd.read_hdf('mcmc.hdf', mode)
         q = chain.quantile([0.16,0.50,0.84])
 
-
         for k in 'kp beta per0 gamma'.split():
             if k.count('kp')==1:
                 s = "{:.2f}"
