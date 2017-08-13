@@ -19,6 +19,9 @@ def main():
     psr2 = subpsr.add_parser('calc-occur', parents=[psr_parent])
     psr2.set_defaults(func=calc_occur)
 
+    psr2 = subpsr.add_parser('fit-occur', parents=[psr_parent])
+    psr2.set_defaults(func=fit_occur)
+
     psr2 = subpsr.add_parser('stats', parents=[psr_parent])
     psr2.set_defaults(func=stats)
 
@@ -57,9 +60,28 @@ def calc_comp(args):
 def calc_occur(args):
     import cksmet.io
     print "calc occur"
-    df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=2)
-    df = cksmet.io.load_table('occur-nsmet=5',cache=2)
+    #df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=2)
+    #df = cksmet.io.load_table('occur-nsmet=5',cache=2)
     df = cksmet.io.load_table('occur-nsmet=2',cache=2)
+
+def fit_occur(args):
+    import cksmet.io
+    '''
+    cksmet.io.load_fit('fit_smet-hot-sn',cache=2)
+    cksmet.io.load_fit('fit_smet-hot-se',cache=2)
+    cksmet.io.load_fit('fit_smet-warm-sn',cache=2)
+    cksmet.io.load_fit('fit_smet-warm-se',cache=2)
+    cksmet.io.load_fit('fit_smet-hot-jup',cache=2)
+    cksmet.io.load_fit('fit_smet-warm-ss',cache=2)
+    '''
+
+    cksmet.io.load_fit('fit_per-sub-se',cache=2)
+    cksmet.io.load_fit('fit_per-sub-sn',cache=2)
+    cksmet.io.load_fit('fit_per-sup-se',cache=2)
+    cksmet.io.load_fit('fit_per-sup-sn',cache=2)
+    cksmet.io.load_fit('fit_per-sup-ss',cache=2)
+    cksmet.io.load_fit('fit_per-sup-ss',cache=2)
+
 
 def create_plots(args):
     import cksmet.plotting.smet

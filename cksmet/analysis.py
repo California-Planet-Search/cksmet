@@ -1,5 +1,6 @@
 import pandas as pd 
 
+import cksmet.fit
 import cksmet.occur
 import cksmet.io
 import cksmet.grid
@@ -80,4 +81,41 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
 
     return out
 
+def fit_occurrence(key):
+    exp_fit = 'fit_smet'
+    powerlaw_cutoff_fit = 'fit_per'
 
+
+    if exp_fit.count(key)==1:
+        # Fit hot SN
+        _, dist, size = key.split('-')
+        df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=1)
+        cut = df.ix[dist,size]
+        cut = cut[cut.smetc.between(-0.4,0.4)]
+        fit = cksmet.fit.FitExponential(
+            cut.smetc, cut.nplnt, cut.ntrial
+        )
+
+        fit.fit()
+        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=30)
+        fit.print_parameters()
+
+    elif exp_fit.count(key)==1:
+        # Fit hot SN
+        _, dist, size = key.split('-')
+        df = cksmet.io.load_table('occur-nsmet=2')
+        cut = df.ix[dist,size]
+        cut = cut[cut.smetc.between(-0.4,0.4)]
+        fit = cksmet.fit.FitPowerLawCutOff(
+            cut.smetc, cut.nplnt, cut.ntrial
+        )
+
+        fit.fit()
+        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=30)
+        fit.print_parameters()
+
+    else:
+        assert False, "{} not supported".format(key)
+
+
+    return fit
