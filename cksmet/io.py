@@ -176,8 +176,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = cksmet.analysis.compute_binned_occurrence(
             per_bins, prad_bins, smet_bins
         )
-        df = pd.merge(df, size,left_on='prad1',right_index=True)
-        df = pd.merge(df, smet,left_on='smet1',right_index=True)
+        df = pd.merge(df, size, left_on='prad1',right_index=True)
+        df = pd.merge(df, smet, left_on='smet1',right_index=True)
         df.set_index(['size', 'smet'], inplace=True)
 
     elif table=='occur-nper=2-nsmet=5':
@@ -202,7 +202,7 @@ dist = pd.DataFrame(
 size = pd.DataFrame(
     index=[1.0,1.7,4.0,8.0],data=['se','sn','ss','jup',],columns=['size']
 )
-smet = pd.DataFrame(index=[-1,0],data=['sub','sup'],columns=['met'])
+smet = pd.DataFrame(index=[-1,0],data=['sub','sup'],columns=['smet'])
 
 
 

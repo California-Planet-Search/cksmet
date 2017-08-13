@@ -66,13 +66,15 @@ def calc_occur(args):
 
 def fit_occur(args):
     import cksmet.io
-    '''
+
     cksmet.io.load_fit('fit_smet-hot-sn',cache=2)
     cksmet.io.load_fit('fit_smet-hot-se',cache=2)
     cksmet.io.load_fit('fit_smet-warm-sn',cache=2)
     cksmet.io.load_fit('fit_smet-warm-se',cache=2)
+
     cksmet.io.load_fit('fit_smet-hot-jup',cache=2)
     cksmet.io.load_fit('fit_smet-warm-ss',cache=2)
+
     '''
 
     cksmet.io.load_fit('fit_per-sub-se',cache=2)
@@ -81,10 +83,15 @@ def fit_occur(args):
     cksmet.io.load_fit('fit_per-sup-sn',cache=2)
     cksmet.io.load_fit('fit_per-sup-ss',cache=2)
     cksmet.io.load_fit('fit_per-sup-ss',cache=2)
+    '''
+
+
+
 
 
 def create_plots(args):
     import cksmet.plotting.smet
+    import cksmet.plotting.occur
     '''
     cksmet.plotting.smet.cuts()
     gcf().savefig('fig_prad-smet-cuts.pdf')
@@ -107,9 +114,15 @@ def create_plots(args):
     fig1, fig2 = cksmet.plotting.samples.lamo_detectability() 
     fig1.savefig('fig_lamo-smet-hr.pdf')
     fig2.savefig('fig_lamo-smet-kepmag-cdpp.pdf')
-    '''
     fig = cksmet.plotting.samples.smet_snr() 
     fig.savefig('fig_smet-snr.pdf')
+    '''
+
+    cksmet.plotting.occur.fig_smet_small4()
+    gcf().savefig('fig_smet-small4.pdf')
+
+    cksmet.plotting.occur.fig_smet_large4()
+    gcf().savefig('fig_smet-large4.pdf')
 
 def update_paper(args):
     files = [
@@ -122,7 +135,9 @@ def update_paper(args):
         'fig_lamo-on-cks.pdf',
         'fig_lamo-smet-hr.pdf',
         'fig_lamo-smet-kepmag-cdpp.pdf',
-        'fig_smet-snr.pdf'
+        'fig_smet-snr.pdf',
+        'fig_smet-small4.pdf',
+        'fig_smet-large4.pdf',
     ]
 
     for _file in files:

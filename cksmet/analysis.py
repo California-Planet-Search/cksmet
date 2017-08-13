@@ -85,8 +85,7 @@ def fit_occurrence(key):
     exp_fit = 'fit_smet'
     powerlaw_cutoff_fit = 'fit_per'
 
-
-    if exp_fit.count(key)==1:
+    if key.count(exp_fit)==1:
         # Fit hot SN
         _, dist, size = key.split('-')
         df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=1)
@@ -95,7 +94,6 @@ def fit_occurrence(key):
         fit = cksmet.fit.FitExponential(
             cut.smetc, cut.nplnt, cut.ntrial
         )
-
         fit.fit()
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=30)
         fit.print_parameters()
@@ -117,5 +115,5 @@ def fit_occurrence(key):
     else:
         assert False, "{} not supported".format(key)
 
-
+    fit.occur = cut
     return fit
