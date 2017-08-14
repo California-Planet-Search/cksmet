@@ -7,6 +7,9 @@ import cksmet.grid
 import cksmet.comp
 
 def calc_completeness():
+    method = 'fulton-gamma' # treatment for planet detectability
+    impact = 0.9 # maximum impact parameter considered.
+
     field = cksmet.io.load_table('field-cuts',cache=1)
     field = field.query('~isany')
     field = field.rename(columns={'huber_srad':'srad','huber_smass':'smass'})
@@ -18,16 +21,12 @@ def calc_completeness():
     spacing_dict = {'per':'log','prad':'log'}
     grid = cksmet.grid.Grid(comp_bins_dict,spacing_dict)
 
-    prob_det_mes_name = 'step-%i' % 12
-    impact_transit = 0.9
-    comp = cksmet.comp.Completeness(
-        field, grid, prob_det_mes_name, impact_transit 
-    )
-    comp.mesfac = 1
+    comp = cksmet.comp.Completeness(field, grid, method, impact)
     comp.compute_grid_prob_det()
     comp.compute_grid_prob_tr()
     comp.init_prob_det_interp()
     return comp
+
 
 def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     print "Initializing occurrence object"

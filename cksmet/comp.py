@@ -19,7 +19,7 @@ class Completeness(object):
     of a representive ensemble of stars.  
     """
 
-    def __init__(self, stars, grid, prob_det_mes_name, impact_transit):
+    def __init__(self, stars, grid, method, impact_transit):
         """
         Args:
             stars (pandas.DataFrame): Sample of stars from which planets 
@@ -33,9 +33,10 @@ class Completeness(object):
                 - smass: Stellar mass (solar masses) 
                 - srad: Stellar radius (solar-radii) 
             grid (Grid): Grid object that contains boundaries of bins.
-            prob_det_mes_name (str): method to convert MES into probabilty 
-                of detection. Must be one of: 
 
+            method (str): method for converting per, prad into prob_det either:
+                - mes-step
+                - fulton-gamma: Fulton et al. fit to gamma function.
         """
         self.stars = stars
 
@@ -56,36 +57,37 @@ class Completeness(object):
         self.values = values
         self.nstars = len(stars)
         self.grid = grid
-        self.prob_det_mes_name = prob_det_mes_name
+        self.method = method
         self.impact_transit = impact_transit
 
-    def mes(self, per, prad):
+    def snr(self, per, prad):
         """
-        Calculate Multiple Event Statistic
+        Calculate expected transit SNR
 
         For a planet of a given period and size, calculate the
-        expected MES for every star in the sample.
+        expected SNR for every star in the sample.
 
         Args:
             per (float) : orbital period of planet days
             prad (float): size of planet in Earth-radii 
 
         Returns:
-            array: MES
+            array: SNR 
 
         """
         depth = self._depth(prad)
         tdur = self._tdur(per)
         cdpp = self._cdpp(tdur) * 1e-6
         num_transits = self._num_transits(per)
-        _mes = depth / cdpp * np.sqrt(num_transits)
-        return _mes
+        snr = depth / cdpp * np.sqrt(num_transits)
+        return snr
 
     def mes_scaled(self, per, prad):
         """
         Calculate Multiple Event Statistic and apply scaling
         """
         return self.mesfac * self.mes(per, prad)
+
 
     def _tdur(self, per):
         """
@@ -185,7 +187,7 @@ class Completeness(object):
 
         return out
 
-    def prob_det(self, per, prad, method='direct'):
+    def prob_det(self, per, prad, interp=False):
         """Probability that a planet would be detectable
 
         Probability that transiting planet with orbital period `per`
@@ -205,15 +207,18 @@ class Completeness(object):
                 planet
 
         """        
-        
-        if method=='direct':
-            mes = self.mes_scaled(per, prad)
-            _prob_det = 1.0 * self.prob_det_mes(mes).sum() / self.nstars 
-        elif method=='interp': 
-            #_prob_det = self.prob_det_interp((per, prad))
-            _prob_det = self.prob_det_interp(per, prad, grid=False)
+        if interp==False:
+            if self.method.count('step'):
+                mes = self.mes_scaled(per, prad)
+                _prob_det = 1.0*self.prob_det_mes(mes).sum()
+                _prob_det /= self.nstars
+
+            elif self.method.count('fulton-gamma'):
+                snr = self.snr(per, prad)
+                _prob_det = fulton_gamma(snr).sum() 
+                _prob_det/=self.nstars
         else:
-            assert False,'Invalid method'
+            _prob_det = self.prob_det_interp(per, prad, grid=False)
 
         return _prob_det
 
@@ -318,7 +323,6 @@ class Completeness(object):
 
     def init_prob_det_interp(self):
         """
-        
         """
         # Define the regular grid for interpolation
         x0 = np.array(self.grid.ds.per)
@@ -354,4 +358,14 @@ class Completeness(object):
         res = scipy.integrate.nquad(_prob_det, limits, **kw)
         prob_det_mean = res[0] / area
         return prob_trdet_mean, prob_det_mean
+
+
+from scipy.stats import gamma
+def fulton_gamma(snr):
+    k = 17.56 
+    l = 1.00 
+    theta = 0.49
+    return gamma.cdf(snr, k, l, theta)
+
+
 
