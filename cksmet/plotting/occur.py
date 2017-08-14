@@ -11,6 +11,8 @@ from matplotlib.transforms import blended_transform_factory as btf
 import lmfit
 from lmfit import Parameters
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+import pandas as pd 
+from matplotlib.transforms import blended_transform_factory as btf
 
 def histograms(smetbins, occL, query, tworuns=True):
     if tworuns==True:
@@ -262,13 +264,6 @@ def annotate_checkerboard(df,print_ul=False):
         ax.add_artist(at)
 
 
-
-regions = {
-    'HotJ':[[1,10],[8,22.6]],
-    'HotSupE':[[3,30],[1,2]],
-    'HotSubN':[[3,30],[2,4]],
-    'CoolSubN':[[30,300],[2,4]],
-}
 
 
 def annotate_checkerboard_diff(df,print_ul=False):
@@ -576,8 +571,6 @@ def period(mode, fit=True,mcmc=False):
 
 
 
-from matplotlib.transforms import blended_transform_factory as btf
-
 def fig_per_small():
     fig,axL = subplots(ncols=2,figsize=(10,4),sharex=True,sharey=True)
     sca(axL[0])
@@ -599,7 +592,7 @@ def fig_per_small():
     fig.savefig('fig_occur-per-small.pdf')
     #cksmet.plotting.occur.period_sn()
 
-import pandas as pd 
+
 
 
 def smet(occur,**kw):

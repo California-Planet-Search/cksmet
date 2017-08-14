@@ -25,6 +25,9 @@ def main():
     psr2 = subpsr.add_parser('stats', parents=[psr_parent])
     psr2.set_defaults(func=stats)
 
+    psr2 = subpsr.add_parser('print-fit-stats', parents=[psr_parent], )
+    psr2.set_defaults(func=print_fit_stats)
+
     psr2 = subpsr.add_parser('create-plots', parents=[psr_parent], )
     psr2.set_defaults(func=create_plots)
 
@@ -86,7 +89,16 @@ def fit_occur(args):
     '''
 
 
+def print_fit_stats(args):
+    fn = 'val_fit.tex'
+    cmd = 'python -c "import cksmet.tables; cksmet.tables.print_fit_stats()" | tee {}'.format(fn)
+    os.system(cmd)
 
+    cmd = "bin/texkeyval.sh {0} fit > temp".format(fn)
+    os.system(cmd)
+
+    cmd = "mv temp {0}".format(fn)
+    os.system(cmd)
 
 
 def create_plots(args):
@@ -138,6 +150,7 @@ def update_paper(args):
         'fig_smet-snr.pdf',
         'fig_smet-small4.pdf',
         'fig_smet-large4.pdf',
+        'val_fit.tex',
     ]
 
     for _file in files:

@@ -4,7 +4,7 @@ import lmfit
 import cksmet.model
 import copy
 import corner
-fmt = {'kp':"{:.2f}",'beta':"{:.2f}",'gamma':"{:.1f}",'per0':"{:.1f}"}
+fmt = {'kp':"{:.3f}",'beta':"{:.2f}",'gamma':"{:.1f}",'per0':"{:.1f}"}
 
 class Fit(object):
     def __init__(self, x, nplnt, ntrial):
@@ -21,7 +21,7 @@ class Fit(object):
     def _negloglike(self,params):
         return -1.0 * self._loglike(params)
 
-    def print_parameters(self):
+    def print_parameters(self,prefix=''):
         chain = self.flatchain
         q = chain.quantile([0.16,0.50,0.84])
         for k in q.columns:
@@ -30,7 +30,7 @@ class Fit(object):
             err1 = s.format(q.ix[0.84,k] - q.ix[0.50,k])
             err2 = s.format(q.ix[0.16,k] - q.ix[0.50,k])
             s = "$%s^{+%s}_{%s}$" % (val, err1,err2)
-            print r"{{{}}}{{{}}}".format(k,s)
+            print r"{{{}{}}}{{{}}}".format(prefix,k,s)
 
     def sample(self, x, nsamp,):
         psamples = self.flatchain.sample(nsamp)

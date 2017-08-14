@@ -5,6 +5,10 @@ import cksphys
 from cksmet.cuts import lamo_cuttypes, plnt_cuttypes, get_cut
 from collections import OrderedDict
 import cksphys.io
+import pandas as pd
+from collections import OrderedDict
+
+
 
 def cuts_planets():
     """
@@ -78,51 +82,26 @@ def smet_dist_lamost():
     for q, smet in lamoq.iteritems():
         print r"{:.0f}\% & {:.3f} & {:.3f} \\".format(q*100, cksq.ix[q], lamoq.ix[q])
 
-import pandas as pd
-from collections import OrderedDict
 
-def print_statistics():
-    """
-    Apply cuts in sucession, count number of stars that pass
-    """
-
-    d = OrderedDict()
-    modes = [
-        'se-sub',
-        'se-sup',
-        'sn-sub',
-        'sn-sup',
-        'ss-sup',
+def print_fit_stats():
+    keys = [
+        'fit_smet-hot-sn',
+        'fit_smet-hot-se',
+        'fit_smet-warm-sn',
+        'fit_smet-warm-se',
+        'fit_smet-hot-jup',
+        'fit_smet-warm-ss',
     ]
-    for mode in modes:
-        chain = pd.read_hdf('mcmc.hdf', mode)
-        q = chain.quantile([0.16,0.50,0.84])
-
-        for k in 'kp beta per0 gamma'.split():
-            if k.count('kp')==1:
-                s = "{:.2f}"
-            if k.count('beta')==1:
-                s =  "{:.2f}"
-            if k.count('gamma')==1:
-                s = "{:.1f}"
-            if k.count('per0')==1:
-                s = "{:.1f}"
-
-            val = s.format(q.ix[0.50,k])
-            err1 = s.format(q.ix[0.84,k] - q.ix[0.50,k])
-            err2 = s.format(q.ix[0.16,k] - q.ix[0.50,k])
-            d[mode+'_'+k] = val
-            d[mode+'_'+k+'_err1'] = err1
-            d[mode+'_'+k+'_err2'] = err2
-            d[mode+'_'+k+'_fmt'] = "$%s^{+%s}_{%s}$" % (val, err1,err2)
-
-    
-    for k, v in d.iteritems():
-        print r"{{{}}}{{{}}}".format(k,v)
-
+        
+    for key in keys:
+        _,prefix = key.split('_')
+        fit = cksmet.io.load_fit(key,cache=1)
+        fit.print_parameters(prefix+'-') 
 
 
 def stats():
+
+
     d = OrderedDict()
     cache = 1 
     cand = cksphys.io.load_table('cks-cuts',cache=cache)
