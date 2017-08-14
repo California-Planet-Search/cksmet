@@ -82,34 +82,28 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     return out
 
 def fit_occurrence(key):
-    exp_fit = 'fit_smet'
-    powerlaw_cutoff_fit = 'fit_per'
-
-    if key.count(exp_fit)==1:
+    if key.count('fit_smet')==1:
         # Fit hot SN
         _, dist, size = key.split('-')
         df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=1)
         cut = df.ix[dist,size]
         cut = cut[cut.smetc.between(-0.4,0.4)]
-        fit = cksmet.fit.FitExponential(
-            cut.smetc, cut.nplnt, cut.ntrial
-        )
+        fit = cksmet.fit.Exponential(cut.smetc, cut.nplnt, cut.ntrial)
         fit.fit()
-        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=30)
+        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
         fit.print_parameters()
 
-    elif exp_fit.count(key)==1:
+    elif key.count('fit_per')==1:
         # Fit hot SN
-        _, dist, size = key.split('-')
-        df = cksmet.io.load_table('occur-nsmet=2')
-        cut = df.ix[dist,size]
-        cut = cut[cut.smetc.between(-0.4,0.4)]
-        fit = cksmet.fit.FitPowerLawCutOff(
-            cut.smetc, cut.nplnt, cut.ntrial
-        )
+
+        _, smet, size = key.split('-')
+        df = cksmet.io.load_table('occur-nsmet=2',cache=1)
+        cut = df.ix[size,smet]
+        fit = cksmet.fit.PowerLawCutoff(cut.perc, cut.nplnt, cut.ntrial)
+        cut = cut[cut.perc.between(1,350) & (cut.prob_det_mean > 0.25)]
 
         fit.fit()
-        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=30)
+        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
         fit.print_parameters()
 
     else:

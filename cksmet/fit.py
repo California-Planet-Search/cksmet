@@ -60,18 +60,18 @@ class Fit(object):
     def corner(self):
         corner.corner(self.flatchain)
 
-class FitExponential(Fit):
+class Exponential(Fit):
     def __init__(self, *args, **kwargs):
-        super(FitExponential, self).__init__(*args, **kwargs)
+        super(Exponential, self).__init__(*args, **kwargs)
         self.model = cksmet.model.smet_exponential
         p = Parameters()
         p.add('kp',value=0.06,vary=True,min=0,max=1)
         p.add('beta',value=0.28,vary=True)
         self.p0 = p
 
-class FitPowerLawCutoff(Fit):
+class PowerLawCutoff(Fit):
     def __init__(self, *args, **kwargs):
-        super(FitPowerLawCutoff, self).__init__(*args, **kwargs)
+        super(PowerLawCutoff, self).__init__(*args, **kwargs)
         self.model = cksmet.model.powerlaw_cutoff
         p = Parameters()
         p.add('kp',value=0.06,vary=True,min=0,max=1)

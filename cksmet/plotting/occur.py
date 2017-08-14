@@ -1,18 +1,15 @@
 from matplotlib.pylab import *
-import xarray as xr
 import seaborn as sns
-sns.set_style('ticks')
-sns.set_color_codes()
 import matplotlib.patheffects as path_effects
-import cksmet.analysis
-import cksmet.occur
-from cksmet.grid import *
 from matplotlib.transforms import blended_transform_factory as btf
-import lmfit
-from lmfit import Parameters
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 import pandas as pd 
-from matplotlib.transforms import blended_transform_factory as btf
+
+import cksmet.analysis
+import cksmet.occur
+
+sns.set_style('ticks')
+sns.set_color_codes()
 
 def histograms(smetbins, occL, query, tworuns=True):
     if tworuns==True:
@@ -168,8 +165,6 @@ def checkerboard_ratio(smetbin, print_ul=False):
     label_checkerboard()
     return ds0,ds
 
-
-
 def checkerboard_ratio(smetbin, print_ul=False):
     cachefn = cksmet.analysis.cachefn([-0.75,0.5])
     occ0  = cksmet.analysis.load_occur(cache=1,cachefn=cachefn,smetbin=smetbin)
@@ -262,8 +257,6 @@ def annotate_checkerboard(df,print_ul=False):
             xy, width, height,ec='k',lw=2, fc='none'
         )
         ax.add_artist(at)
-
-
 
 
 def annotate_checkerboard_diff(df,print_ul=False):
@@ -392,14 +385,6 @@ def plot_completeness(comp):
     label()
     ylabel('')
 
-smetbins = [
-    [-0.70, -0.45],
-    [-0.45, -0.15],
-    [-0.15, 0.15],
-    [0.15,  0.45],
-]
-
-
 def binned_period(df, **kwargs):
     kw = dict(fmt='_',mew=2,ms=7,capsize=2,**kwargs)
     i_count = 0 
@@ -421,179 +406,57 @@ def binned_period(df, **kwargs):
     ylabel('Planets Per Star')
 
 
-def binned_smet(df, **kwargs):
-    """
-    Plot occurrence as function of smet.
-    """
+'''
+axvline(res.params['per0'],color=color,ls='--',lw=1)
+ax = gca()
+trans = btf(ax.transData, ax.transAxes) 
+s = "P = {:.1f} days".format(res.params['per0'].value)
+text(res.params['per0'],0.925,s, color=color,rotation=90, transform=trans, ha=ha,size='medium')
+'''
 
-    kw = dict(fmt='o',mew=2,ms=7,capsize=2,**kwargs)
-    i_count = 0 
-    for i, row in df.iterrows():
-        if i_count!=0:
-            kw['label']=None
-        i_count+=1
+# Occurrence period
 
-        rate, rate_err1, rate_err2, rate_ul, stats = \
-            cksmet.occur.binomial_rate(row.ntrial, row.nplnt)
+def per(occur,**kw):
+    yerr = np.array(occur['rate_err2 rate_err1'.split()]).T
+    yerr[0] *= -1 
+    semilogy()
+    errorbar(occur.perc,occur.rate,yerr=yerr,fmt='o',**kw)
+    if kw.has_key('label'):
+        kw['label'] = ''
+    plot(occur.perc,occur.rate_ul,marker='v',lw=0,**kw)
 
-        if row.nplnt > 0:
-            yerr = [[-rate_err1],[rate_err2]] 
-            errorbar([row.smetc],rate,yerr=yerr,**kw)
-        else:
-            errorbar([row.smetc],rate_ul,yerr=rate_ul*0.2,uplims=True,**kw)
-            
-    xlabel('[Fe/H] (dex)')
-    ylabel('Planets Per Star')
+def per_sample(key,**kw):
+    semilogx()
+    fit = cksmet.io.load_fit(key)
+    per(fit.occur,**kw)
+    peri = np.logspace(log10(1),log10(350), 100)
+    fit_samples = fit.sample(peri,1000)
+    fit_best = fit.model(fit.pfit,peri)
+    p16, p50, p84 = np.percentile(fit_samples,[16,50,84],axis=0)
+    fill_between(peri, p16, p84, color='pink',zorder=1)
+    plot(peri,fit_best,color='r',alpha=1)
 
-prob_det_mean = 0.25 
-import cksmet.model
-
-def period(mode, fit=True,mcmc=False):
-    df = cksmet.io.load_table('occur-bins-2',cache=1)
-    loglog()
-    df = df[(df.prob_det_mean > prob_det_mean) & (df.perc < 1000)]
-
-    if mode=='se-sub':
-        cut = df[
-            df.pradc.between(1,1.7) & 
-            df.smetc.between(-1,0) 
-        ]
-        color='b'
-        label='[Fe/H] < 0'
-        ha = 'left'
-
-    elif mode=='se-sup':
-        cut = df[
-            df.pradc.between(1,1.7) & 
-            df.smetc.between(-0,0.5) 
-        ]
-        color='r'
-        label='[Fe/H] > 0'
-        ha = 'right'
-
-    elif mode=='sn-sub':
-        cut = df[
-            df.pradc.between(1.7,4.0) & 
-            df.smetc.between(-1,0) 
-        ]
-        color='b'
-        label='[Fe/H] < 0'
-        ha = 'left'
-        
-    elif mode=='sn-sup':
-        cut = df[
-            df.pradc.between(1.7,4.0) & 
-            df.smetc.between(-0,0.5) 
-        ]
-        color='r'
-        label='[Fe/H] > 0'
-        ha = 'right'
-
-    elif mode=='ss-sub':
-        cut = df[
-            df.pradc.between(4.0,8.0) & 
-            df.smetc.between(-1,0.0) 
-        ]
-        color='b'
-        label='[Fe/H] > 0'
-        ha = 'right'
-
-    elif mode=='ss-sup':
-        cut = df[
-            df.pradc.between(4.0,8.0) & 
-            df.smetc.between(-0,0.5) 
-        ]
-        color='r'
-        label='[Fe/H] < 0'
-        ha = 'right'
-    elif mode=='jup-sub':
-        cut = df[
-            df.pradc.between(8.0,22.0) & 
-            df.smetc.between(-1,0.0) 
-        ]
-        color='b'
-        label='[Fe/H] > 0'
-        ha = 'right'
-
-    elif mode=='jup-sup':
-        cut = df[
-            df.pradc.between(8.0,22.0) & 
-            df.smetc.between(-0,0.5) 
-        ]
-        color='r'
-        label='[Fe/H] < 0'
-        ha = 'right'
-
-
-    else:
-        assert False, "mode {} not supported".format(mode)
-        
-    binned_period(cut,color=color,label=label)   
-
-    if fit:
-        p = Parameters()
-        p.add('kp',value=0.06,vary=True,min=0,max=1)
-        p.add('beta',value=0.28,vary=True)
-        p.add('per0',value=7,vary=True,min=0,max=100)
-        p.add('gamma',value=2,vary=True)
-        perc = np.array(cut.perc)
-        nplnt = np.array(cut.nplnt)
-        ntrial = np.array(cut.ntrial)
-
-        def loglike(params):
-            _loglike = cksmet.model.loglike_powerlaw_and_cutoff(params, perc, nplnt, ntrial)
-            return _loglike 
-
-        def negloglike(params):
-            return -1.0 * loglike(params)
-
-        negloglike(p)
-        res = lmfit.minimize(negloglike,p,method='Nelder')
-        #lmfit.report_fit(res)
-        perci = logspace(log10(1),log10(300),300)
-
-        fit = cksmet.model.powerlaw_and_cutoff(res.params, perci)
-        plot(perci,fit,color=color)
-        axvline(res.params['per0'],color=color,ls='--',lw=1)
-        ax = gca()
-        trans = btf(ax.transData, ax.transAxes) 
-        s = "P = {:.1f} days".format(res.params['per0'].value)
-        text(res.params['per0'],0.925,s, color=color,rotation=90, transform=trans, ha=ha,size='medium')
-
-    if mcmc:
-        mini = lmfit.Minimizer(loglike, res.params)
-        res_emcee = mini.emcee(
-            burn=300, steps=600, thin=1, nwalkers=300, params=res.params, seed=1
-        )
-        res_emcee.flatchain.to_hdf('mcmc.hdf',mode)
-
-
-
-
-
-def fig_per_small():
-    fig,axL = subplots(ncols=2,figsize=(10,4),sharex=True,sharey=True)
+def fig_per_small2():
+    fig,axL = subplots(ncols=2,figsize=(8.5,4),sharex=True,sharey=True)
     sca(axL[0])
-    cksmet.plotting.occur.period('se-sub')
-    cksmet.plotting.occur.period('se-sup')
-    legend(frameon=True)
+    per_sample('fit_per-sub-se',color='b',label='< 0')
+    per_sample('fit_per-sup-se',color='g',label='> 0')
+    title('Super-Earths')
+    legend(title='[Fe/H]',frameon=True)
+    fig_label("a")
 
     sca(axL[1])
-    cksmet.plotting.occur.period('sn-sub')
-    cksmet.plotting.occur.period('sn-sup')
-
-    fig.set_tight_layout(True)
+    per_sample('fit_per-sub-sn',color='b',label='< 0')
+    per_sample('fit_per-sup-sn',color='g',label='> 0')
+    title('Sub-Neptunes')
+    legend(title='[Fe/H]',frameon=True)
+    fig_label("b")
 
     xt = [1,3,10,30,100,300]
     xticks(xt,xt)
-    xlim(1,300)
-    ylim(3e-4,3e-1)
-    ylim(3e-4,1)
-    fig.savefig('fig_occur-per-small.pdf')
-    #cksmet.plotting.occur.period_sn()
-
-
-
+    setp(axL, xlabel='Period (days)', ylim=(3e-4,1), xlim = (1,300))
+    setp(axL[0], ylabel='Planets Per Star')
+    fig.set_tight_layout(True)
 
 def smet(occur,**kw):
     yerr = np.array(occur['rate_err2 rate_err1'.split()]).T
@@ -613,36 +476,6 @@ def smet_sample(key, **kw):
     p16, p50, p84 = np.percentile(fit_samples,[16,50,84],axis=0)
     fill_between(smeti, p16, p84, color='pink',zorder=1)
     plot(smeti,fit_best,color='r',alpha=1)
-
-
-def fig_smet_small2():
-    fig, axL = subplots(ncols=2,sharey=True,figsize=(8.5,6),sharex=True)
-
-    sca(axL[0]) # Hot SE
-    smet('hot-se',color='g',label='Hot Super-Earths')
-
-    sca(axL[0]) # Hot SN
-    smet('hot-sn',color='b',label='Hot Sub-Neptunes')
-    legend()
-
-    sca(axL[1]) # Warm SE
-    smet('warm-se',color='g',label='Warm Super-Earths')
-
-    sca(axL[1]) # Warm SN
-    smet('warm-sn',color='b',label='Warm Sub-Neptunes')
-    ylim(3e-3,5e-1)
-
-    xlim(-0.4,0.4)
-    ylim()
-
-
-def fig_label(text):
-    add_anchored(
-        text, loc=2, frameon=True, 
-        prop=dict(size='large', weight='bold'),
-        bbox=dict(ec='none', fc='w', alpha=0.8)
-    )
-
 
 def fig_smet_small4():
     fig, axL = subplots(ncols=2,nrows=2,figsize=(8.5,7),sharex=True)
@@ -710,51 +543,6 @@ def fig_smet_large4():
     fig.set_tight_layout(True)
     xlim(-0.4,0.4)
 
-
-def fig_smet_large2():
-    fig, axL = subplots(ncols=2,sharey=False,figsize=(8.5,4),sharex=True)
-
-    sca(axL[0]) # Hot SE
-    smet('fit_smet-hot-jup',color='b',)
-    title('Hot Jupiters')
-
-    sca(axL[1]) 
-    smet('fit_smet-warm-ss',color='b')
-    title('Warm Sub-Saturns')
-
-    setp(axL,ylim=(1e-4,1e-1))
-    setp(axL,xlabel='[Fe/H] (dex)')
-    setp(axL[0],ylabel='Planets Per Star')
-    fig.set_tight_layout(True)
-
-
-def fig_smet_hot_small():
-    fig, axL = subplots()
-    smet('hot-se',color='g',label='Hot Super-Earths')
-    smet('hot-sn',color='b',label='Hot Sub-Neptunes')
-    legend()
-
-def fig_smet_warm_small():
-    fig, axL = subplots(figsize=(4,3))
-    smet('warm-se',color='g',label='Warm Super-Earths')
-    smet('warm-sn',color='b',label='Warm Sub-Neptunes')
-    legend()
-    xlim(-0.4,0.4)
-    ylim(1e-1,6e-1)
-    xlabel('Metallicty')
-    ylabel('Planets Per Star')
-
-def fig_smet_hot_small():
-    fig, axL = subplots(figsize=(4,3))
-    smet('hot-se',color='g',label='Hot Super-Earths')
-    smet('hot-sn',color='b',label='Hot Sub-Neptunes')
-    legend()
-    xlim(-0.4,0.4)
-    ylim(1e-3,1e-1)
-    xlabel('Metallicty')
-    ylabel('Planets Per Star')
-    
-
 def add_anchored(*args,**kwargs):
     """
     Parameters
@@ -785,3 +573,10 @@ def add_anchored(*args,**kwargs):
 
     ax = plt.gca()
     ax.add_artist(at)
+
+def fig_label(text):
+    add_anchored(
+        text, loc=2, frameon=True, 
+        prop=dict(size='large', weight='bold'),
+        bbox=dict(ec='none', fc='w', alpha=0.8)
+    )

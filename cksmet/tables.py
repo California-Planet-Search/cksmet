@@ -84,24 +84,31 @@ def smet_dist_lamost():
 
 
 def print_fit_stats():
-    keys = [
-        'fit_smet-hot-sn',
+    fits = [
+        'fit_per-sub-se',
+        'fit_per-sup-se',
+        'fit_per-sub-sn',
+        'fit_per-sup-sn',
+        'fit_per-sup-ss',
+
         'fit_smet-hot-se',
-        'fit_smet-warm-sn',
         'fit_smet-warm-se',
-        'fit_smet-hot-jup',
+
+        'fit_smet-hot-sn',
+        'fit_smet-warm-sn',
+
         'fit_smet-warm-ss',
+        'fit_smet-hot-jup',
     ]
+
         
-    for key in keys:
-        _,prefix = key.split('_')
+    for key in fits:
+        _, prefix = key.split('_')
         fit = cksmet.io.load_fit(key,cache=1)
         fit.print_parameters(prefix+'-') 
 
 
 def stats():
-
-
     d = OrderedDict()
     cache = 1 
     cand = cksphys.io.load_table('cks-cuts',cache=cache)

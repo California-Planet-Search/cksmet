@@ -69,25 +69,25 @@ def calc_occur(args):
 
 def fit_occur(args):
     import cksmet.io
+    fits = [
+        'fit_per-sub-se',
+        'fit_per-sup-se',
+        'fit_per-sub-sn',
+        'fit_per-sup-sn',
+        'fit_per-sup-ss',
 
-    cksmet.io.load_fit('fit_smet-hot-sn',cache=2)
-    cksmet.io.load_fit('fit_smet-hot-se',cache=2)
-    cksmet.io.load_fit('fit_smet-warm-sn',cache=2)
-    cksmet.io.load_fit('fit_smet-warm-se',cache=2)
+        'fit_smet-hot-se',
+        'fit_smet-warm-se',
 
-    cksmet.io.load_fit('fit_smet-hot-jup',cache=2)
-    cksmet.io.load_fit('fit_smet-warm-ss',cache=2)
+        'fit_smet-hot-sn',
+        'fit_smet-warm-sn',
 
-    '''
+        'fit_smet-warm-ss',
+        'fit_smet-hot-jup',
+    ]
 
-    cksmet.io.load_fit('fit_per-sub-se',cache=2)
-    cksmet.io.load_fit('fit_per-sub-sn',cache=2)
-    cksmet.io.load_fit('fit_per-sup-se',cache=2)
-    cksmet.io.load_fit('fit_per-sup-sn',cache=2)
-    cksmet.io.load_fit('fit_per-sup-ss',cache=2)
-    cksmet.io.load_fit('fit_per-sup-ss',cache=2)
-    '''
-
+    for fit in fits:
+        cksmet.io.load_fit(fit)
 
 def print_fit_stats(args):
     fn = 'val_fit.tex'
@@ -99,7 +99,6 @@ def print_fit_stats(args):
 
     cmd = "mv temp {0}".format(fn)
     os.system(cmd)
-
 
 def create_plots(args):
     import cksmet.plotting.smet
@@ -130,10 +129,13 @@ def create_plots(args):
     fig.savefig('fig_smet-snr.pdf')
     '''
 
-    cksmet.plotting.occur.fig_smet_small4()
-    gcf().savefig('fig_smet-small4.pdf')
+    cksmet.plotting.occur.fig_per_small2()
+    gcf().savefig('fig_per-small2.pdf')
 
     cksmet.plotting.occur.fig_smet_large4()
+    gcf().savefig('fig_smet-large4.pdf')
+
+    cksmet.plotting.occur.fig_per4()
     gcf().savefig('fig_smet-large4.pdf')
 
 def update_paper(args):
@@ -148,6 +150,7 @@ def update_paper(args):
         'fig_lamo-smet-hr.pdf',
         'fig_lamo-smet-kepmag-cdpp.pdf',
         'fig_smet-snr.pdf',
+        'fig_per-small2.pdf',
         'fig_smet-small4.pdf',
         'fig_smet-large4.pdf',
         'val_fit.tex',
