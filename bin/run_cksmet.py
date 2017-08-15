@@ -31,6 +31,9 @@ def main():
     psr2 = subpsr.add_parser('create-plots', parents=[psr_parent], )
     psr2.set_defaults(func=create_plots)
 
+    psr2 = subpsr.add_parser('create-tables', parents=[psr_parent], )
+    psr2.set_defaults(func=create_tables)
+
     psr2 = subpsr.add_parser('update-paper', parents=[psr_parent])
     psr2.set_defaults(func=update_paper)
 
@@ -58,7 +61,6 @@ def calc_comp(args):
 def calc_occur(args):
     import cksmet.io
     print "calc occur"
-
     df = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=2)
     df = cksmet.io.load_object('occur-nsmet=5',cache=2)
     df = cksmet.io.load_object('occur-nsmet=2',cache=2)
@@ -127,8 +129,10 @@ def create_plots(args):
     fig.savefig('fig_smet-snr.pdf')
     '''
     
-    comp = cksmet.io.load_comp()
-    cksmet.plotting.comp.fig_prob_detect_transit(comp)
+    cksmet.plotting.occur.fig_checkerboard()
+    gcf().savefig('fig_checkerboard.pdf')
+
+    cksmet.plotting.comp.fig_prob_detect_transit()
     gcf().savefig('fig_prob-detect-transit.pdf')
 
     cksmet.plotting.occur.fig_per_small2()
@@ -140,23 +144,41 @@ def create_plots(args):
     cksmet.plotting.occur.fig_smet_small4()
     gcf().savefig('fig_smet-small4.pdf')
 
+def create_tables(args):
+    import cksmet.tables
+    def write_table(fn, lines):
+        with open(fn,'w') as f:
+            f.writelines("\n".join(lines))
+
+    lines = cksmet.tables.cuts_lamost()
+    write_table('tab_cuts-lamost.tex',lines)
+
+    lines = cksmet.tables.cuts_planets()
+    write_table('tab_cuts-planets.tex',lines)
+
+    lines = cksmet.tables.cuts_field()
+    write_table('tab_cuts-field.tex',lines)
 
 def update_paper(args):
     files = [
-        'fig_prad-smet-cuts.pdf',
-        'fig_prad-fe.pdf',
-        'fig_prad-fe-percentiles.pdf',
-        'fig_stellar-samples.pdf',
-        'fig_per-prad-slices-equal-stars.pdf',
-        'fig_period_prad_slices',
+        'fig_checkerboard.pdf',
         'fig_lamo-on-cks.pdf',
         'fig_lamo-smet-hr.pdf',
-        'fig_lamo-smet-kepmag-cdpp.pdf',
-        'fig_smet-snr.pdf',
-        'fig_prob-detect-transit.pdf',
+        'fig_per-prad-slices-equal-stars.pdf',
         'fig_per-small2.pdf',
-        'fig_smet-small4.pdf',
+        'fig_prad-fe-percentiles.pdf',
+        'fig_prad-fe.pdf',
+        'fig_prad-smet-cuts.pdf',
+        'fig_pradfe.pdf',
+        'fig_prob-detect-transit.pdf',
         'fig_smet-large4.pdf',
+        'fig_smet-small4.pdf',
+        'fig_smet-snr.pdf',
+        'fig_stellar-samples.pdf',
+
+        'tab_cuts-lamost.tex',
+        'tab_cuts-planets.tex',
+        'tab_cuts-field.tex',
         'val_fit.tex',
     ]
 

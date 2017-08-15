@@ -8,8 +8,6 @@ import cksphys.io
 import pandas as pd
 from collections import OrderedDict
 
-
-
 def cuts_planets():
     """
     Apply cuts in sucession, count number of stars that pass
@@ -18,23 +16,27 @@ def cuts_planets():
         'cks+nea+iso-floor+huber-phot+furlan',cache=1,
         cachefn='../CKS-Physical/load_table_cache.hdf'
     )
-    print_cut_statistics(cks, 'cks', plnt_cuttypes)
+    lines = cut_statistics(cks, 'cks', plnt_cuttypes)
+    return lines 
 
 def cuts_field():
     """
     Apply cuts in sucession, count number of stars that pass
     """
     stars = cksmet.io.load_table('huber14+cdpp',cache=1)
-    print_cut_statistics(stars, 'field', plnt_cuttypes)
+    lines = cut_statistics(stars, 'field', plnt_cuttypes)
+    return lines
 
 def cuts_lamost():
     """
     Apply cuts in sucession, count number of stars that pass
     """
     lamo = cksmet.io.load_table('lamost-dr2-cal',cache=1)
-    print_cut_statistics(lamo, 'lamo', lamo_cuttypes)
+    lines = cut_statistics(lamo, 'lamo', lamo_cuttypes)
+    return lines
 
-def print_cut_statistics(df, sample, cuttypes):
+def cut_statistics(df, sample, cuttypes):
+    lines = []
     nall = len(df)
     count = np.zeros(nall)
     npassall = np.sum(count==0)
@@ -50,10 +52,13 @@ def print_cut_statistics(df, sample, cuttypes):
         # pass all cuts
         f_pass_current = float(npassall) / float(npassallprev) 
         f_pass_all = float(npassall) / nall # pass all cuts
-        print r"{: <35} & {: <5} & {: <5} & {:.2f} \\".format(
+        line = r"{: <35} & {: <5} & {: <5} & {:.2f} \\".format(
             cut.texstr, npass, npassall, f_pass_current
         )
+        lines.append(line)
         npassallprev = npassall
+
+    return lines
 
 def smet_dist_lamost():
     """
@@ -104,7 +109,7 @@ def print_fit_stats():
         
     for key in fits:
         _, prefix = key.split('_')
-        fit = cksmet.io.load_fit(key,cache=1)
+        fit = cksmet.io.load_object(key,cache=1)
         fit.print_parameters(prefix+'-') 
 
 
