@@ -7,7 +7,6 @@ from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 import scipy.integrate
 from astropy import constants as c
 from astropy import units as u
-from matplotlib.pylab import * 
 
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
@@ -19,7 +18,7 @@ class Completeness(object):
     of a representive ensemble of stars.  
     """
 
-    def __init__(self, stars, grid, method, impact_transit):
+    def __init__(self, stars, grid, method, impact):
         """
         Args:
             stars (pandas.DataFrame): Sample of stars from which planets 
@@ -33,10 +32,10 @@ class Completeness(object):
                 - smass: Stellar mass (solar masses) 
                 - srad: Stellar radius (solar-radii) 
             grid (Grid): Grid object that contains boundaries of bins.
-
             method (str): method for converting per, prad into prob_det either:
                 - mes-step
                 - fulton-gamma: Fulton et al. fit to gamma function.
+            impact: maximum impact parameter considered for our sample
         """
         self.stars = stars
 
@@ -58,7 +57,7 @@ class Completeness(object):
         self.nstars = len(stars)
         self.grid = grid
         self.method = method
-        self.impact_transit = impact_transit
+        self.impact = impact
 
     def snr(self, per, prad):
         """
@@ -228,7 +227,7 @@ class Completeness(object):
         """
         a = self._smax(per)
         srad = (np.array(self.stars['srad']) * u.R_sun).to(u.AU).value
-        _prob_tr = srad * self.impact_transit / a
+        _prob_tr = srad * self.impact / a
         return _prob_tr.mean()
 
     def compute_mes_factor(self, plnt_mes):

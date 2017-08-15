@@ -1,6 +1,7 @@
 from matplotlib.pylab import *
 import seaborn as sns
 from cksmet.plotting.config import *
+import cksmet.io
 
 def mesfac(st):
     fig,axL = subplots(ncols=2,figsize=(8,4))
@@ -47,7 +48,9 @@ def compare_prob_det_direct_interp(comp):
     rat.plot.contourf(y='prad',x='per',ax=axL[2],fig=fig, vmax=1.01,vmin=0.99)
     fig.set_tight_layout(True)
 
-def fig_prob_detect_transit(comp):
+def fig_prob_detect_transit():
+    comp = cksmet.io.load_object('comp',cache=1)
+
     ds = comp.grid.ds
     ds['prob_det'] = comp.grid.ds['prob_det']
     ds['prob_trdet'] = comp.grid.ds['prob_tr'] * ds['prob_det']

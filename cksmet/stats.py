@@ -92,7 +92,7 @@ def sum_cells(ntrial, nplnt):
         d = samples_to_rate(samples,uplim=True)
     else:
         samples = samplesL[~isuplim].sum(0)
-        d = samples_to_rate(samples,uplim=True)
+        d = samples_to_rate(samples,uplim=False)
     return d
 
 def samples_to_rate(samples, uplim=False):

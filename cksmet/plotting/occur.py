@@ -18,9 +18,10 @@ def fig_checkerboard():
     epsilon = 0.0001
 
     fig,ax = subplots(figsize=(8,6))
-    
-    #levels = [prob_det_min,prob_det_min + epsilon]
-    #contour(dsf.perc, dsf.pradc, dsf.prob_det, levels=levels,color='k')
+
+    # Completeness contour
+    # levels = [prob_det_min,prob_det_min + epsilon]
+    # contour(dsf.perc, dsf.pradc, dsf.prob_det, levels=levels,color='k')
     ds = occ.df.groupby(['perc','pradc']).first().to_xarray()
     ds = ds.transpose('pradc','perc')
 
@@ -28,14 +29,9 @@ def fig_checkerboard():
     prad = np.hstack([np.array(ds.prad1[:,0]),np.array(ds.prad2[-1,0])])
     X,Y = meshgrid(per,prad)
 
-    ds = ds.where(
-        (ds.per1 > 0.3) & (ds.per2 < 350)
-    )
-
+    ds = ds.where((ds.per2 < 350) & (ds.prob_det_mean > 0.25))
     ar = ma.masked_invalid(np.array(ds.rate))
     ar = log10(ar)
-    print X.shape,Y.shape,ar.shape
-    print X,Y,ar
     pcolormesh(X,Y,ar,cmap='YlGn',vmin=-4,vmax=-1)
     #pcolormesh(X,Y,ar,cmap='YlGn',vmin=-4,vmax=-1)
     colorbar(ticks=[-4,-3,-2,-1])
@@ -45,6 +41,7 @@ def fig_checkerboard():
     annotate_checkerboard(df)
     loglog()
     label_checkerboard()
+    fig.set_tight_layout(True)
     return occ
 
 def label_checkerboard():
@@ -115,7 +112,7 @@ def per(occur,**kw):
 
 def per_sample(key,**kw):
     semilogx()
-    fit = cksmet.io.load_fit(key)
+    fit = cksmet.io.load_object(key)
     per(fit.occur,**kw)
     peri = np.logspace(log10(1),log10(350), 100)
     fit_samples = fit.sample(peri,1000)
@@ -156,7 +153,7 @@ def smet(occur,**kw):
     plot(occur.smetc,occur.rate_ul,marker='v',lw=0,**kw)
 
 def smet_sample(key, **kw):
-    fit = cksmet.io.load_fit(key)
+    fit = cksmet.io.load_object(key)
     smet(fit.occur,**kw)
     smeti = np.linspace(-0.4,0.4,100)
     fit_samples = fit.sample(smeti,1000)
