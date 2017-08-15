@@ -1,12 +1,12 @@
 import pandas as pd 
 
-import cksmet.fit
-import cksmet.occur
 import cksmet.io
 import cksmet.grid
 import cksmet.comp
+import cksmet.occur
+import cksmet.fit
 
-def calc_completeness():
+def load_completeness():
     method = 'fulton-gamma' # treatment for planet detectability
     impact = 0.9 # maximum impact parameter considered.
 
@@ -27,10 +27,9 @@ def calc_completeness():
     comp.init_prob_det_interp()
     return comp
 
-
 def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     print "Initializing occurrence object"
-    comp = cksmet.io.load_comp()
+    comp = cksmet.io.load_object('comp',cache=1)
     cks = cksmet.io.load_table('cks-cuts')
     cks = cks[~cks.isany]
     cks = cks.dropna(subset=['iso_prad'])
@@ -78,9 +77,73 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     for k in 'per1 perc per2 prad1 pradc prad2 smet1 smetc smet2'.split():
         out[k+'r'] = out[k].round(decimals=1)
 
-    return out
+    occur.df = out
+    return occur
 
-def fit_occurrence(key):
+def load_occur(key):
+    if key=='occur-test':
+        per_bins = [1,10,100]
+        prad_bins = [1,4,16]
+        smet_bins = [-1, 0, 0.5]
+        occ = compute_binned_occurrence(
+            per_bins, prad_bins, smet_bins
+        )
+
+    elif key=='occur-nsmet=5':
+        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
+        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
+        smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+
+        occ.df = pd.merge(occ.df,dist,left_on='per1',right_index=True)
+        occ.df = pd.merge(occ.df,size,left_on='prad1',right_index=True)
+        occ.df.set_index(['dist', 'size'], inplace=True)
+
+    elif key=='occur-nsmet=2':
+        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
+        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
+        smet_bins = [-1, 0, 0.5] 
+        occ = compute_binned_occurrence(
+            per_bins, prad_bins, smet_bins
+        )
+        occ.df = pd.merge(occ.df, size, left_on='prad1',right_index=True)
+        occ.df = pd.merge(occ.df, smet, left_on='smet1',right_index=True)
+        occ.df.set_index(['size', 'smet'], inplace=True)
+
+    elif key=='occur-nper=2-nsmet=5':
+        per_bins = [1, 10, 100]
+        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
+        smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
+        occ = compute_binned_occurrence(
+            per_bins, prad_bins, smet_bins
+        )
+        occ.df = pd.merge(occ.df,dist,left_on='per1',right_index=True)
+        occ.df = pd.merge(occ.df,size,left_on='prad1',right_index=True)
+        occ.df.set_index(['dist', 'size'], inplace=True)
+
+    elif key=='occur-nsmet=1':
+        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
+        prad_bins = cksmet.grid.prad_bins_dict['two-per-octave']
+        smet_bins = [-1, 0.5]
+        occ = compute_binned_occurrence(
+            per_bins, prad_bins, smet_bins
+        )
+    
+    return occ
+
+
+# Commonly used qualitative indecies
+dist = pd.DataFrame(
+    index=[1.0,10,300], data=['hot','warm','cool'], columns=['dist']
+)
+size = pd.DataFrame(
+    index=[1.0,1.7,4.0,8.0],data=['se','sn','ss','jup',],columns=['size']
+)
+smet = pd.DataFrame(index=[-1,0],data=['sub','sup'],columns=['smet'])
+
+
+
+def load_fit(key):
     if key.count('fit_smet')==1:
         # Fit hot SN
         _, dist, size = key.split('-')

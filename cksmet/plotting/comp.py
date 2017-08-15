@@ -1,6 +1,6 @@
 from matplotlib.pylab import *
 import seaborn as sns
-#from cksmet.plotting.config import *
+from cksmet.plotting.config import *
 
 def mesfac(st):
     fig,axL = subplots(ncols=2,figsize=(8,4))
@@ -47,7 +47,7 @@ def compare_prob_det_direct_interp(comp):
     rat.plot.contourf(y='prad',x='per',ax=axL[2],fig=fig, vmax=1.01,vmin=0.99)
     fig.set_tight_layout(True)
 
-def twopane(comp):
+def fig_prob_detect_transit(comp):
     ds = comp.grid.ds
     ds['prob_det'] = comp.grid.ds['prob_det']
     ds['prob_trdet'] = comp.grid.ds['prob_tr'] * ds['prob_det']
@@ -67,12 +67,9 @@ def twopane(comp):
     sca(axL[1])
     loglog()
     kw['levels'] = [0.000,0.001,0.010,0.020,0.050,0.100]
-    
     ds['prob_trdet'].plot.contourf(**kw)
-    fig = gcf()
-    fig.set_tight_layout(True)
     label()
-    ylabel('')
     grid()
-    setp(axL,xlim=(1,300),ylim=(0.5,32))
 
+    setp(axL,xlim=(1,300),ylim=(0.5,32))
+    fig.set_tight_layout(True)

@@ -53,19 +53,16 @@ def calibrate_lamo(args):
 def calc_comp(args):
     import cksmet.analysis
     import cksmet.io
-    comp = cksmet.analysis.calc_completeness()
-    fn = cksmet.io.COMPLETENESS_FILE
-    print "computing completeness"
-    with open(fn,'w') as f:
-        pickle.dump(comp,f)
-        print "saved {}".format(fn) 
+    cksmet.io.load_object('comp',cache=2)
 
 def calc_occur(args):
     import cksmet.io
     print "calc occur"
-    #df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=2)
-    #df = cksmet.io.load_table('occur-nsmet=5',cache=2)
-    df = cksmet.io.load_table('occur-nsmet=2',cache=2)
+
+    df = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=2)
+    df = cksmet.io.load_object('occur-nsmet=5',cache=2)
+    df = cksmet.io.load_object('occur-nsmet=2',cache=2)
+    df = cksmet.io.load_object('occur-nsmet=1',cache=2)
 
 def fit_occur(args):
     import cksmet.io
@@ -87,7 +84,7 @@ def fit_occur(args):
     ]
 
     for fit in fits:
-        cksmet.io.load_fit(fit)
+        cksmet.io.load_fit(fit,cache=2)
 
 def print_fit_stats(args):
     fn = 'val_fit.tex'
@@ -103,6 +100,7 @@ def print_fit_stats(args):
 def create_plots(args):
     import cksmet.plotting.smet
     import cksmet.plotting.occur
+    import cksmet.plotting.comp
     '''
     cksmet.plotting.smet.cuts()
     gcf().savefig('fig_prad-smet-cuts.pdf')
@@ -128,6 +126,10 @@ def create_plots(args):
     fig = cksmet.plotting.samples.smet_snr() 
     fig.savefig('fig_smet-snr.pdf')
     '''
+    
+    comp = cksmet.io.load_comp()
+    cksmet.plotting.comp.fig_prob_detect_transit(comp)
+    gcf().savefig('fig_prob-detect-transit.pdf')
 
     cksmet.plotting.occur.fig_per_small2()
     gcf().savefig('fig_per-small2.pdf')
@@ -135,8 +137,9 @@ def create_plots(args):
     cksmet.plotting.occur.fig_smet_large4()
     gcf().savefig('fig_smet-large4.pdf')
 
-    cksmet.plotting.occur.fig_per4()
-    gcf().savefig('fig_smet-large4.pdf')
+    cksmet.plotting.occur.fig_smet_small4()
+    gcf().savefig('fig_smet-small4.pdf')
+
 
 def update_paper(args):
     files = [
@@ -150,6 +153,7 @@ def update_paper(args):
         'fig_lamo-smet-hr.pdf',
         'fig_lamo-smet-kepmag-cdpp.pdf',
         'fig_smet-snr.pdf',
+        'fig_prob-detect-transit.pdf',
         'fig_per-small2.pdf',
         'fig_smet-small4.pdf',
         'fig_smet-large4.pdf',

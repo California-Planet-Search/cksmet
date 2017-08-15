@@ -1,3 +1,4 @@
+from matplotlib.pylab import * 
 
 def label():
     xlabel('Orbital Period (days)')

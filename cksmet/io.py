@@ -158,52 +158,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
                 qobs=0
             df['tobs'] += qobs * long_cadence_day * lc_per_quarter[q]
 
-    elif table=='occur-nsmet=5':
-        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
-        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
-        smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
-        df = cksmet.analysis.compute_binned_occurrence(
-            per_bins, prad_bins, smet_bins
-        )
-        df = pd.merge(df,dist,left_on='per1',right_index=True)
-        df = pd.merge(df,size,left_on='prad1',right_index=True)
-        df.set_index(['dist', 'size'], inplace=True)
-
-    elif table=='occur-nsmet=2':
-        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
-        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
-        smet_bins = [-1, 0, 0.5] 
-        df = cksmet.analysis.compute_binned_occurrence(
-            per_bins, prad_bins, smet_bins
-        )
-        df = pd.merge(df, size, left_on='prad1',right_index=True)
-        df = pd.merge(df, smet, left_on='smet1',right_index=True)
-        df.set_index(['size', 'smet'], inplace=True)
-
-    elif table=='occur-nper=2-nsmet=5':
-        per_bins = [1, 10, 100]
-        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
-        smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
-        df = cksmet.analysis.compute_binned_occurrence(
-            per_bins, prad_bins, smet_bins
-        )
-        df = pd.merge(df,dist,left_on='per1',right_index=True)
-        df = pd.merge(df,size,left_on='prad1',right_index=True)
-        df.set_index(['dist', 'size'], inplace=True)
-
     else:
         assert False, "table {} not valid table name".format(table)
     return df
-
-# Commonly used qualitative indecies
-dist = pd.DataFrame(
-    index=[1.0,10,300], data=['hot','warm','cool'], columns=['dist']
-)
-size = pd.DataFrame(
-    index=[1.0,1.7,4.0,8.0],data=['se','sn','ss','jup',],columns=['size']
-)
-smet = pd.DataFrame(index=[-1,0],data=['sub','sup'],columns=['smet'])
-
 
 
 def add_prefix(df,prefix,ignore=['id']):
@@ -230,12 +187,29 @@ def sub_prefix(df, prefix,ignore=['id']):
     df = df.rename(columns=namemap)
     return df
 
-def load_comp():
-    with open(COMPLETENESS_FILE,'r') as f:
-        comp = pickle.load(f)
-    return comp
-    
-def load_fit(key, cache=1):
+def load_object(key, cache=1):
+    pklfn = os.path.join(DATADIR,key+'.pkl')
+    if cache==1:
+        with open(pklfn,'r') as f:
+            obj = pickle.load(f)
+            return obj
+
+    elif cache==2:
+        obj = load_object(key,cache=0)
+        with open(pklfn,'w') as f:
+            pickle.dump(obj,f)
+        
+        return obj
+
+    if key.count('occur')==1:
+        obj = cksmet.analysis.load_occur(key)
+    elif key.count('comp')==1:
+        obj = cksmet.analysis.load_completeness()
+    elif key.count('fit')==1:
+        obj = cksmet.analysis.load_fit(key)
+    return obj
+
+def load_occur(key, cache=1):
     pklfn = os.path.join(DATADIR,key+'.pkl')
     if cache==1:
         with open(pklfn,'r') as f:
@@ -243,12 +217,10 @@ def load_fit(key, cache=1):
             return fit 
 
     elif cache==2:
-        fit = load_fit(key,cache=0)
+        fit = load_occur(key,cache=0)
         with open(pklfn,'w') as f:
             pickle.dump(fit,f)
 
-    fit = cksmet.analysis.fit_occurrence(key)
-    return fit
 
 def table_bin(df, bins, key):
     g = df.groupby(pd.cut(df.iso_prad,bins=bins))

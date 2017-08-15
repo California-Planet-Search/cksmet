@@ -22,6 +22,7 @@ per_bins_dict['xfine-hj'] = bins[(1 <= bins) & (bins <= 10)]
 prad_bins_dict = {
     'xfine': np.round(np.logspace(np.log10(0.5),np.log10(32),49 ),2),
     'fine': np.round(np.logspace(np.log10(0.5),np.log10(32),25 ),2),
+    'two-per-octave': 2**np.arange(-1,5.001,0.5),
     'coarse': [ 
          0.5,  0.71, 1.00, 1.41, 2.0, 2.83, 4.00, 5.66, 8.0, 11.31, 16.0
     ]

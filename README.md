@@ -16,7 +16,13 @@ run_cksmet.py calc-occur
 
 run_cksmet.py fit-occur
 
+## Create plots
 
+run_cksmet.py create-plots
+
+## Output fit statistics
+
+run_cksmet.py print-fit-stats
 
 
 

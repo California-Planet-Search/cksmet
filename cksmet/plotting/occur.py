@@ -11,198 +11,41 @@ import cksmet.occur
 sns.set_style('ticks')
 sns.set_color_codes()
 
-def histograms(smetbins, occL, query, tworuns=True):
-    if tworuns==True:
-        minrate = histograms(smetbins, occL, query,tworuns=False),
-        yl = list(ylim())
-        yuplim = 0.1 * (yl[1] - yl[0])
-        cla() 
-    else:
-        yuplim=nan
-        fig, ax = subplots(figsize=(6,4))
+def fig_checkerboard():
+    occ  = cksmet.io.load_object('occur-nsmet=1') 
 
-    ax = gca()
-    ydata_nstars = 0.9
-    ydata_occur = 0.85
-    minrate = 1
-    for i in range(len(smetbins)):
-        smetbin = smetbins[i]
-        occ = occL[i]
-
-        cut = occ.grid_loguni.ds.to_dataframe().query(query)
-        x = 0.5 * (smetbin[0] + smetbin[1])
-        xerr = 0.5 * (smetbin[1] - smetbin[0])
-        errkw = dict(color='k')
-
-        sferng = "[Fe/H] = [{:+.2f},{:+.2f}]".format(*smetbin)
-
-        trans = btf(ax.transData, ax.transAxes)
-        nplanets = cut.nplanets.sum()
-        if nplanets > 0:
-            out = cksmet.occur.combine_cells(cut)
-            prate = out['rate'] * 100
-            prate_err1 = out['rate_err1'] * 100
-            prate_err2 = out['rate_err2'] * 100
-
-            soccur = "{:.2f} {:+.2f}/{:+.2f}%".format(
-                prate, prate_err1, prate_err2
-            )
-            texoccur = "${:.2f}^{{{:+.2f}}}_{{{:+.2f}}}\%$".format(
-                prate, prate_err1, prate_err2
-            )
-            
-            y = [prate]
-            yerr = [[-prate_err2],[prate_err1]]
-            errorbar([x],[y], xerr=xerr, yerr=yerr,**errkw)
-            minrate = min(minrate,prate)
-        else:
-            out = cksmet.occur.combine_cells(cut)
-            prate_ul = out['rate_ul'] * 100
-            soccur = "< {:.2f}%".format(prate_ul)
-            texoccur = "$< {:.2f}\%$".format(prate_ul)
-
-            yuplim = min(yuplim,prate_ul)
-            errorbar(
-                [x],[prate_ul], xerr=xerr, yerr=[yuplim], uplims=True, 
-                capsize=5,**errkw
-            )
-            minrate = min(minrate,prate_ul)
-        
-        print "{}, {}".format(sferng, soccur)
-        print "Mean ntrials {:.1f}".format(out['ntrials'])
-        print "" 
-        text(smetbin[0], ydata_occur, texoccur, transform=trans)
-        
-        texnstars = "${:.0f}/{:.0f}$".format(nplanets, occ.nstars)
-        text(smetbin[0], ydata_nstars, texnstars, transform=trans)
-
-    xdata_label = smetbins[0][0] - 0.2
-    text(xdata_label, ydata_nstars, " $N_p/N_\star$", transform=trans)
-    text(xdata_label, ydata_occur, " $f$", transform=trans)
-
-    yl = list(ylim())
-    yl[0] = 0
-    yl[1] *= 1.2
-    ylim(*yl)
-
-    xl = list(xlim())
-    xl[0] = xdata_label
-    xlim(*xl)
-    xlabel('[Fe/H]')
-    ylabel('Planets per 100 Stars')
-    return minrate 
-
-def checkerboard(smetbin, print_ul=False):
-    cachefn = cksmet.analysis.cachefn(smetbin)
-    occ  = cksmet.analysis.load_occur(cache=1,cachefn=cachefn,smetbin=smetbin) 
-    #downsamp = {'per':2,'prad':4}
-    #occ.set_grid_loguni(downsamp)
     prob_det_min = 0.1
     epsilon = 0.0001
 
     fig,ax = subplots(figsize=(8,6))
-    plot(occ.plnt.per,occ.plnt.prad,'.',ms=6,color='Tomato')
-    dsf = occ.grid_fine.ds
     
-    levels = [prob_det_min,prob_det_min + epsilon]
-    contour(dsf.perc, dsf.pradc, dsf.prob_det, levels=levels,color='k')
+    #levels = [prob_det_min,prob_det_min + epsilon]
+    #contour(dsf.perc, dsf.pradc, dsf.prob_det, levels=levels,color='k')
+    ds = occ.df.groupby(['perc','pradc']).first().to_xarray()
+    ds = ds.transpose('pradc','perc')
 
-    ds = occ.grid_loguni.ds.transpose('prad','per')
     per = np.hstack([np.array(ds.per1[0]),np.array(ds.per2[0,-1])])
     prad = np.hstack([np.array(ds.prad1[:,0]),np.array(ds.prad2[-1,0])])
     X,Y = meshgrid(per,prad)
 
     ds = ds.where(
-        (ds.per1 > 0.3) & (ds.per2 < 350) & (ds.prob_det_min > prob_det_min) 
+        (ds.per1 > 0.3) & (ds.per2 < 350)
     )
+
     ar = ma.masked_invalid(np.array(ds.rate))
     ar = log10(ar)
+    print X.shape,Y.shape,ar.shape
+    print X,Y,ar
     pcolormesh(X,Y,ar,cmap='YlGn',vmin=-4,vmax=-1)
+    #pcolormesh(X,Y,ar,cmap='YlGn',vmin=-4,vmax=-1)
     colorbar(ticks=[-4,-3,-2,-1])
 
+    plot(occ.plnt.per,occ.plnt.prad,'.',ms=6,color='Tomato')
     df = ds.to_dataframe()
     annotate_checkerboard(df)
     loglog()
     label_checkerboard()
     return occ
-
-def checkerboard_ratio(smetbin, print_ul=False):
-    cachefn = cksmet.analysis.cachefn([-0.75,0.5])
-    occ0  = cksmet.analysis.load_occur(cache=1,cachefn=cachefn,smetbin=smetbin)
-    cachefn = cksmet.analysis.cachefn(smetbin)
-    occ  = cksmet.analysis.load_occur(cache=1,cachefn=cachefn,smetbin=smetbin) 
-
-    downsamp = {'per':2,'prad':4}
-    occ0.set_grid_loguni(downsamp)
-    occ.set_grid_loguni(downsamp)
-    prob_det_min = 0.25 
-
-    fig,ax = subplots(figsize=(8,6))
-    loglog()
-    plot(occ.plnt.per,occ.plnt.prad,'.',ms=6,color='Tomato')
-    dsf = occ.grid_fine.ds
-    contour(dsf.perc,dsf.pradc,dsf.prob_det,levels=[0.25,0.251],color='k')
-
-    ds0 = occ0.grid_loguni.ds.transpose('prad','per')
-    ds = occ.grid_loguni.ds.transpose('prad','per')
-    per = np.hstack([np.array(ds.per1[0]),np.array(ds.per2[0,-1])])
-    prad = np.hstack([np.array(ds.prad1[:,0]),np.array(ds.prad2[-1,0])])
-    X,Y = meshgrid(per,prad)
-
-    ds = ds.where(
-        (ds.per1 > 0.3) & (ds.per2 < 350) & (ds.prob_det_min > 0.25) 
-    )
-    #ratio
-    ds['lograte_diff'] = np.log10(ds.rate) - np.log10(ds0.rate)
-    ar = ma.masked_invalid(ds.lograte_diff)
-
-    #ar = log10(ar)
-    pcolormesh(X,Y,ar,cmap='coolwarm',vmin=-1,vmax=1)
-    colorbar(ticks=[-2,-1,0,1,2])
-
-    df = ds.to_dataframe()
-    annotate_checkerboard_diff(df)
-    label_checkerboard()
-    return ds0,ds
-
-def checkerboard_ratio(smetbin, print_ul=False):
-    cachefn = cksmet.analysis.cachefn([-0.75,0.5])
-    occ0  = cksmet.analysis.load_occur(cache=1,cachefn=cachefn,smetbin=smetbin)
-    cachefn = cksmet.analysis.cachefn(smetbin)
-    occ  = cksmet.analysis.load_occur(cache=1,cachefn=cachefn,smetbin=smetbin) 
-
-    downsamp = {'per':2,'prad':4}
-    occ0.set_grid_loguni(downsamp)
-    occ.set_grid_loguni(downsamp)
-    prob_det_min = 0.25 
-
-    fig,ax = subplots(figsize=(8,6))
-    loglog()
-    plot(occ.plnt.per,occ.plnt.prad,'.',ms=6,color='Tomato')
-    dsf = occ.grid_fine.ds
-    contour(dsf.perc,dsf.pradc,dsf.prob_det,levels=[0.25,0.251],color='k')
-
-    ds0 = occ0.grid_loguni.ds.transpose('prad','per')
-    ds = occ.grid_loguni.ds.transpose('prad','per')
-    per = np.hstack([np.array(ds.per1[0]),np.array(ds.per2[0,-1])])
-    prad = np.hstack([np.array(ds.prad1[:,0]),np.array(ds.prad2[-1,0])])
-    X,Y = meshgrid(per,prad)
-
-    ds = ds.where(
-        (ds.per1 > 0.3) & (ds.per2 < 350) & (ds.prob_det_min > 0.25) 
-    )
-    #ratio
-    ds['lograte_diff'] = np.log10(ds.rate) - np.log10(ds0.rate)
-    ar = ma.masked_invalid(ds.lograte_diff)
-
-    #ar = log10(ar)
-    pcolormesh(X,Y,ar,cmap='coolwarm',vmin=-1,vmax=1)
-    colorbar(ticks=[-2,-1,0,1,2])
-
-    df = ds.to_dataframe()
-    annotate_checkerboard_diff(df)
-    label_checkerboard()
-    return ds0,ds
 
 def label_checkerboard():
     fig = gcf()
@@ -248,6 +91,7 @@ def annotate_checkerboard(df,print_ul=False):
             ]
         )
 
+    '''
     for key in regions.keys():
         box = regions[key]
         xy = np.array([box[0][0],box[1][0]])
@@ -257,65 +101,7 @@ def annotate_checkerboard(df,print_ul=False):
             xy, width, height,ec='k',lw=2, fc='none'
         )
         ax.add_artist(at)
-
-
-def annotate_checkerboard_diff(df,print_ul=False):
-    ax = gca()
-    for i, row in df.iterrows():
-        xy = np.array([row.per1, row.prad1])
-        width = row.per2 - row.per1
-        height = row.prad2 - row.prad1
-        if ~np.isnan(row.rate_ul):
-            txt=""
-        else:
-            prate = row.lograte_diff 
-            txt = "{:.2f}".format(prate)
-
-        at =  matplotlib.patches.Rectangle(
-            xy, width, height,ec='LightGray',lw=0.5, fc='none'
-        )
-
-        ax.add_artist(at)
-
-        text = ax.annotate(txt, xy=xy, xytext=xy*1.05,size='x-small')
-        text.set_path_effects(
-            [
-                path_effects.Stroke(linewidth=1.5, foreground='white'),
-                path_effects.Normal()
-            ]
-        )
-
-
-
-def binned_period(df, **kwargs):
-    kw = dict(fmt='_',mew=2,ms=7,capsize=2,**kwargs)
-    i_count = 0 
-    for i, row in df.iterrows():
-        if i_count!=0:
-            kw['label']=None
-        i_count+=1
-
-        rate, rate_err1, rate_err2, rate_ul, stats = \
-            cksmet.occur.binomial_rate(row.ntrial, row.nplnt)
-        #print row.nplnt, row.ntrial,rate, rate_err1, rate_err2, rate_ul
-        if row.nplnt > 1:
-            yerr = [[-rate_err1],[rate_err2]] 
-            errorbar([row.perc],rate,yerr=yerr,**kw)
-        else:
-            errorbar([row.perc],rate_ul,yerr=rate_ul*0.2,uplims=True,**kw)
-            
-    xlabel('Orbital Period (days)')
-    ylabel('Planets Per Star')
-
-
-'''
-axvline(res.params['per0'],color=color,ls='--',lw=1)
-ax = gca()
-trans = btf(ax.transData, ax.transAxes) 
-s = "P = {:.1f} days".format(res.params['per0'].value)
-text(res.params['per0'],0.925,s, color=color,rotation=90, transform=trans, ha=ha,size='medium')
-'''
-
+    '''
 # Occurrence period
 
 def per(occur,**kw):

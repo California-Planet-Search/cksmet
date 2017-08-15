@@ -344,7 +344,7 @@ class Completeness(object):
         def _prob_det(logper, logprad):
             per = np.exp(logper)
             prad = np.exp(logprad)
-            prob_det = self.prob_det(per,prad,method='interp')
+            prob_det = self.prob_det(per,prad,interp=True)
             return prob_det
 
         def _prob_trdet(logper, logprad):
@@ -358,7 +358,6 @@ class Completeness(object):
         res = scipy.integrate.nquad(_prob_det, limits, **kw)
         prob_det_mean = res[0] / area
         return prob_trdet_mean, prob_det_mean
-
 
 from scipy.stats import gamma
 def fulton_gamma(snr):
