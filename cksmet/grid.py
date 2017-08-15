@@ -1,40 +1,6 @@
 import numpy as np
 import xarray as xr 
 
-# Some nice, convenient grids
-per_bins_dict = {
-# sqrt2 
-    'xfine': np.round(np.logspace(np.log10(0.1),np.log10(1000),33),4),
-# sqrt2 
-    'fine': [ 
-        1.00, 1.41, 2.00,  2.83,  4.00, 5.66, 8.00,  
-        11.3, 16., 22.6, 32.0, 45.3, 64.0, 90.5, 128., 
-        181,  256 ],
-    'coarse': [ 
-        1.00, 2.00,  4.00, 8.00,  
-        16., 32.0, 64.0, 128., 256 ],
-    'four-per-decade': 10**np.arange(0,3.001,0.25)    
-}    
-
-bins = per_bins_dict['xfine']
-per_bins_dict['xfine-hj'] = bins[(1 <= bins) & (bins <= 10)]
-
-prad_bins_dict = {
-    'xfine': np.round(np.logspace(np.log10(0.5),np.log10(32),49 ),2),
-    'fine': np.round(np.logspace(np.log10(0.5),np.log10(32),25 ),2),
-    'two-per-octave': 2**np.arange(-1,5.001,0.5),
-    'coarse': [ 
-         0.5,  0.71, 1.00, 1.41, 2.0, 2.83, 4.00, 5.66, 8.0, 11.31, 16.0
-    ]
-}
-
-bins = prad_bins_dict['xfine']
-prad_bins_dict['xfine-hj'] = bins[(8 <= bins) & (bins <= 32)]
-
-smet_bins_dict = {
-    'fine': np.arange(-0.8,0.6001,0.2),
-    'four': np.arange(-0.75,0.451,0.3)
-}
 
 class Grid(object):
     """

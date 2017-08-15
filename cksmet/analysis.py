@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd 
 
 import cksmet.io
@@ -5,6 +6,39 @@ import cksmet.grid
 import cksmet.comp
 import cksmet.occur
 import cksmet.fit
+# Commonly used qualitative indecies
+dist = pd.DataFrame(
+    index=[1.0,10,300], data=['hot','warm','cool'], columns=['dist']
+)
+size = pd.DataFrame(
+    index=[1.0,1.7,4.0,8.0],data=['se','sn','ss','jup',],columns=['size']
+)
+smet = pd.DataFrame(index=[-1,0],data=['sub','sup'],columns=['smet'])
+
+# Some nice, convenient grids
+per_bins_dict = {
+# sqrt2 
+    'xfine': np.round(np.logspace(np.log10(0.1),np.log10(1000),33),4),
+# sqrt2 
+    'fine': [ 
+        1.00, 1.41, 2.00,  2.83,  4.00, 5.66, 8.00,  
+        11.3, 16., 22.6, 32.0, 45.3, 64.0, 90.5, 128., 
+        181,  256 ],
+    'coarse': [ 
+        1.00, 2.00,  4.00, 8.00,  
+        16., 32.0, 64.0, 128., 256 ],
+    'four-per-decade': 10**np.arange(-0.5,3.001,0.25)    
+}    
+
+
+prad_bins_dict = {
+    'xfine': np.round(np.logspace(np.log10(0.5),np.log10(32),49 ),2),
+    'fine': np.round(np.logspace(np.log10(0.5),np.log10(32),25 ),2),
+    'two-per-octave': 2**np.arange(-1,5.001,0.5),
+    'coarse': [ 
+         0.5,  0.71, 1.00, 1.41, 2.0, 2.83, 4.00, 5.66, 8.0, 11.31, 16.0
+    ]
+}
 
 def load_completeness():
     method = 'fulton-gamma' # treatment for planet detectability
@@ -15,8 +49,8 @@ def load_completeness():
     field = field.rename(columns={'huber_srad':'srad','huber_smass':'smass'})
     field.index = field.id_kic
 
-    comp_per_bins = cksmet.grid.per_bins_dict['xfine']
-    comp_prad_bins = cksmet.grid.prad_bins_dict['xfine']
+    comp_per_bins = per_bins_dict['xfine']
+    comp_prad_bins = prad_bins_dict['xfine']
     comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
     spacing_dict = {'per':'log','prad':'log'}
     grid = cksmet.grid.Grid(comp_bins_dict,spacing_dict)
@@ -90,7 +124,7 @@ def load_occur(key):
         )
 
     elif key=='occur-nsmet=5':
-        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
+        per_bins = per_bins_dict['four-per-decade']
         prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
         smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
         occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
@@ -100,7 +134,7 @@ def load_occur(key):
         occ.df.set_index(['dist', 'size'], inplace=True)
 
     elif key=='occur-nsmet=2':
-        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
+        per_bins = per_bins_dict['four-per-decade']
         prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
         smet_bins = [-1, 0, 0.5] 
         occ = compute_binned_occurrence(
@@ -122,26 +156,22 @@ def load_occur(key):
         occ.df.set_index(['dist', 'size'], inplace=True)
 
     elif key=='occur-nsmet=1':
-        per_bins = cksmet.grid.per_bins_dict['four-per-decade']
-        prad_bins = cksmet.grid.prad_bins_dict['two-per-octave']
+        per_bins = per_bins_dict['four-per-decade']
+        prad_bins = prad_bins_dict['two-per-octave']
+        smet_bins = [-1, 0.5]
+        occ = compute_binned_occurrence(
+            per_bins, prad_bins, smet_bins
+        )
+    
+    elif key=='occur-hot-jup':
+        per_bins = [1,10]
+        prad_bins = [1,24]
         smet_bins = [-1, 0.5]
         occ = compute_binned_occurrence(
             per_bins, prad_bins, smet_bins
         )
     
     return occ
-
-
-# Commonly used qualitative indecies
-dist = pd.DataFrame(
-    index=[1.0,10,300], data=['hot','warm','cool'], columns=['dist']
-)
-size = pd.DataFrame(
-    index=[1.0,1.7,4.0,8.0],data=['se','sn','ss','jup',],columns=['size']
-)
-smet = pd.DataFrame(index=[-1,0],data=['sub','sup'],columns=['smet'])
-
-
 
 def load_fit(key):
     if key.count('fit_smet')==1:
