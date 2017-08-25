@@ -62,6 +62,8 @@ def load_completeness():
     return comp
 
 def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
+    nstars = cksmet.cuts.n_stars_field_pass_eff 
+
     print "Initializing occurrence object"
     comp = cksmet.io.load_object('comp',cache=1)
     cks = cksmet.io.load_table('cks-cuts')
@@ -77,7 +79,6 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     lamo = cksmet.io.load_table('lamost-dr2-cal-cuts')
     lamo = lamo[~lamo.isany]
     smet_field = lamo.lamo_smet
-    nstars = 35369.0
     occur = cksmet.occur.Occurrence(plnt, comp, nstars, smet_field=smet_field)
 
     print "Define occurrence grid"
@@ -177,8 +178,8 @@ def load_fit(key):
     if key.count('fit_smet')==1:
         # Fit hot SN
         _, dist, size = key.split('-')
-        df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=1)
-        cut = df.ix[dist,size]
+        occ = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=1)
+        cut = occ.df.ix[dist,size]
         cut = cut[cut.smetc.between(-0.4,0.4)]
         fit = cksmet.fit.Exponential(cut.smetc, cut.nplnt, cut.ntrial)
         fit.fit()
@@ -189,8 +190,8 @@ def load_fit(key):
         # Fit hot SN
 
         _, smet, size = key.split('-')
-        df = cksmet.io.load_table('occur-nsmet=2',cache=1)
-        cut = df.ix[size,smet]
+        occ = cksmet.io.load_object('occur-nsmet=2',cache=1)
+        cut = occ.df.ix[size,smet]
         fit = cksmet.fit.PowerLawCutoff(cut.perc, cut.nplnt, cut.ntrial)
         cut = cut[cut.perc.between(1,350) & (cut.prob_det_mean > 0.25)]
 
