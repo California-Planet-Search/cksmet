@@ -18,11 +18,24 @@ run_cksmet.py fit-occur
 
 ## Create plots
 
-run_cksmet.py create-plots
+run_cksmet.py create-plot all
 
 ## Output fit statistics
 
-run_cksmet.py print-fit-stats
+run_cksmet.py create-val all
 
+## Output sample statistics
 
+run_cksmet.py create-table all
+
+## 
+
+run_cksmet.py calibrate-lamo
+run_cksmet.py calc-comp # issue with big endian, workaround run twice
+run_cksmet.py calc-occur
+run_cksmet.py fit-occur
+run_cksmet.py create-plot all
+run_cksmet.py create-table all
+run_cksmet.py create-val all
+run_cksmet.py update-paper
 

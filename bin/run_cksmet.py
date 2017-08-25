@@ -22,17 +22,18 @@ def main():
     psr2 = subpsr.add_parser('fit-occur', parents=[psr_parent])
     psr2.set_defaults(func=fit_occur)
 
-    psr2 = subpsr.add_parser('stats', parents=[psr_parent])
-    psr2.set_defaults(func=stats)
+    # Products for paper
+    psr2 = subpsr.add_parser('create-val', parents=[psr_parent], )
+    psr2.add_argument('name',type=str)
+    psr2.set_defaults(func=create_val)
 
-    psr2 = subpsr.add_parser('print-fit-stats', parents=[psr_parent], )
-    psr2.set_defaults(func=print_fit_stats)
+    psr2 = subpsr.add_parser('create-plot', parents=[psr_parent], )
+    psr2.add_argument('name',type=str)
+    psr2.set_defaults(func=create_plot)
 
-    psr2 = subpsr.add_parser('create-plots', parents=[psr_parent], )
-    psr2.set_defaults(func=create_plots)
-
-    psr2 = subpsr.add_parser('create-tables', parents=[psr_parent], )
-    psr2.set_defaults(func=create_tables)
+    psr2 = subpsr.add_parser('create-table', parents=[psr_parent], )
+    psr2.add_argument('name',type=str)
+    psr2.set_defaults(func=create_table)
 
     psr2 = subpsr.add_parser('update-paper', parents=[psr_parent])
     psr2.set_defaults(func=update_paper)
@@ -40,9 +41,6 @@ def main():
     args = psr.parse_args()
     args.func(args)
 
-def stats(args):
-    import cksmet.stats
-    cksmet.stats.stats()
 
 def calibrate_lamo(args):
     import cksmet.calibrate
@@ -88,105 +86,133 @@ def fit_occur(args):
     for fit in fits:
         cksmet.io.load_fit(fit,cache=2)
 
-def print_fit_stats(args):
-    fn = 'val_fit.tex'
-    cmd = 'python -c "import cksmet.tables; cksmet.tables.print_fit_stats()" | tee {}'.format(fn)
-    os.system(cmd)
+from collections import OrderedDict
+import cksmet.plotting.smet
+import cksmet.plotting.occur
+import cksmet.plotting.comp
+import cksmet.tables
 
-    cmd = "bin/texkeyval.sh {0} fit > temp".format(fn)
-    os.system(cmd)
+def create_table(args):
+    w = Workflow()
+    w.create_file('table', args.name ) 
 
-    cmd = "mv temp {0}".format(fn)
-    os.system(cmd)
+def create_plot(args):
+    w = Workflow()
+    w.create_file('plot', args.name ) 
 
-def create_plots(args):
-    import cksmet.plotting.smet
-    import cksmet.plotting.occur
-    import cksmet.plotting.comp
-    '''
-    cksmet.plotting.smet.cuts()
-    gcf().savefig('fig_prad-smet-cuts.pdf')
-
-    cksmet.plotting.smet.prad_fe()
-    gcf().savefig('fig_prad-fe.pdf')
-
-    cksmet.plotting.smet.prad_fe_percentiles()
-    gcf().savefig('fig_prad-fe-percentiles.pdf')
-
-    cksmet.plotting.samples.samples()
-    gcf().savefig('fig_stellar-samples.pdf')
-
-    cksmet.plotting.smet.period_prad_slices(mode='four-equal-stars')
-    gcf().savefig('fig_per-prad-slices-equal-stars.pdf')
-
-    cksmet.plotting.smet.period_prad_slices(mode='four-equal-smet')
-    gcf().savefig('fig_per-prad-slices-equal-smet.pdf')
-
-    fig1, fig2 = cksmet.plotting.samples.lamo_detectability() 
-    fig1.savefig('fig_lamo-smet-hr.pdf')
-    fig2.savefig('fig_lamo-smet-kepmag-cdpp.pdf')
-    fig = cksmet.plotting.samples.smet_snr() 
-    fig.savefig('fig_smet-snr.pdf')
-    '''
-    
-    cksmet.plotting.occur.fig_checkerboard()
-    gcf().savefig('fig_checkerboard.pdf')
-
-    cksmet.plotting.comp.fig_prob_detect_transit()
-    gcf().savefig('fig_prob-detect-transit.pdf')
-
-    cksmet.plotting.occur.fig_per_small2()
-    gcf().savefig('fig_per-small2.pdf')
-
-    cksmet.plotting.occur.fig_smet_large4()
-    gcf().savefig('fig_smet-large4.pdf')
-
-    cksmet.plotting.occur.fig_smet_small4()
-    gcf().savefig('fig_smet-small4.pdf')
-
-def create_tables(args):
-    import cksmet.tables
-    def write_table(fn, lines):
-        with open(fn,'w') as f:
-            f.writelines("\n".join(lines))
-
-    lines = cksmet.tables.cuts_lamost()
-    write_table('tab_cuts-lamost.tex',lines)
-
-    lines = cksmet.tables.cuts_planets()
-    write_table('tab_cuts-planets.tex',lines)
-
-    lines = cksmet.tables.cuts_field()
-    write_table('tab_cuts-field.tex',lines)
+def create_val(args):
+    w = Workflow()
+    w.create_file('val',args.name) 
 
 def update_paper(args):
-    files = [
-        'fig_checkerboard.pdf',
-        'fig_lamo-on-cks.pdf',
-        'fig_lamo-smet-hr.pdf',
-        'fig_per-prad-slices-equal-stars.pdf',
-        'fig_per-small2.pdf',
-        'fig_prad-fe-percentiles.pdf',
-        'fig_prad-fe.pdf',
-        'fig_prad-smet-cuts.pdf',
-        'fig_pradfe.pdf',
-        'fig_prob-detect-transit.pdf',
-        'fig_smet-large4.pdf',
-        'fig_smet-small4.pdf',
-        'fig_smet-snr.pdf',
-        'fig_stellar-samples.pdf',
+    w = Workflow()
+    w.update_paper() 
 
-        'tab_cuts-lamost.tex',
-        'tab_cuts-planets.tex',
-        'tab_cuts-field.tex',
-        'val_fit.tex',
-    ]
+class Workflow(object):
+    def __init__(self):
+        d = OrderedDict()
+        d['prad-smet-cuts'] = cksmet.plotting.smet.cuts
+        d['prad-fe'] = cksmet.plotting.smet.prad_fe
+        d['prad-fe-percentiles'] = cksmet.plotting.smet.prad_fe_percentiles
+        d['stellar-samples'] = cksmet.plotting.samples.samples
+        d['per-prad-slices-equal-stars'] = lambda : cksmet.plotting.smet.period_prad_slices(mode='four-equal-stars')
+        d['smet-snr'] = cksmet.plotting.samples.smet_snr
+        d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
+        d['prob-detect-transit'] =  cksmet.plotting.comp.fig_prob_detect_transit
+        d['per-small2'] = cksmet.plotting.occur.fig_per_small2
+        d['smet-large4'] = cksmet.plotting.occur.fig_smet_large4
+        d['smet-small4'] = cksmet.plotting.occur.fig_smet_small4
+        self.plot_dict = d
 
-    for _file in files:
-        cmd = 'cp {} paper/'.format(_file)
-        print cmd
-        os.system(cmd)
-        
+        d = OrderedDict()
+        d['cuts-lamost'] = cksmet.tables.cuts_lamost
+        d['cuts-planets'] = cksmet.tables.cuts_planets
+        d['cuts-field'] = cksmet.tables.cuts_field
+        self.table_dict = d
+
+        d = OrderedDict()
+        d['samp'] = cksmet.tables.val_samp
+        d['fit'] = cksmet.tables.val_fit
+        self.val_dict = d
+
+        d = OrderedDict()
+        d['table'] = self.table_dict
+        d['plot'] = self.plot_dict
+        d['val'] = self.val_dict
+        self.all_dict = d
+
+    def key2fn(self, key, kind):
+        if kind=='plot':
+            return 'fig_'+key+'.pdf'
+        if kind=='table':
+            return 'tab_'+key+'.tex'
+        if kind=='val':
+            return 'val_'+key+'.tex'
+            
+    def create_file(self, kind, name):
+        i = 0
+
+        for key, func in self.all_dict[kind].iteritems():
+            if kind=='plot':
+                if name=='all':
+                    func()
+                elif name==key:
+                    func()
+                else:
+                    continue
+
+                    
+                fn = self.key2fn(key, 'plot')
+                gcf().savefig(fn)
+
+            elif kind=='table':
+                if name=='all':
+                    lines = func()
+                elif name==key:
+                    lines = func()
+                else:
+                    continue
+
+                fn = self.key2fn(key, 'table')
+                with open(fn,'w') as f:
+                    f.writelines("\n".join(lines))
+
+            elif kind=='val':
+                fn = self.key2fn(key, 'val')
+                if name=='all':
+                    lines = func()
+                elif name==key:
+                    lines = func()
+                else:
+                    continue
+
+                lines1 = [
+                    "\\newcommand{\%s}[1]{%%" % key,
+                    "\IfEqCase{#1}{%",
+                ]
+
+                lines2 = [
+                    "}[\PackageError{tree}{Undefined option to tree: #1}{}]%",
+                    "}%"
+                ]
+                lines = lines1 + lines + lines2
+
+                with open(fn,'w') as f:
+                    f.writelines("\n".join(lines))
+
+            i+=1
+
+        if i==0:
+            assert False, key + " not a valid plot"
+
+    def update_paper(self):
+        for kind, d in self.all_dict.iteritems():
+            for key, val in d.iteritems():
+                fn = self.key2fn(key, kind)
+                cmd = 'cp {} paper/'.format(fn)
+                print cmd
+                os.system(cmd)
+
 if __name__=="__main__":
     main()
 
