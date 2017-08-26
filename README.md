@@ -31,11 +31,18 @@ run_cksmet.py create-table all
 ## 
 
 run_cksmet.py calibrate-lamo
-run_cksmet.py calc-comp # issue with big endian, workaround run twice
+run_cksmet.py calc-comp
 run_cksmet.py calc-occur
 run_cksmet.py fit-occur
-run_cksmet.py create-plot all
 run_cksmet.py create-table all
+run_cksmet.py create-plot all
 run_cksmet.py create-val all
 run_cksmet.py update-paper
 
+
+``` Occurrence rate of HJs
+occ = cksmet.io.load_object('occur-nsmet=1',cache=1)
+cut = occ.df.query('1 < perc < 10 and 8 < pradc < 24')
+print cut['rate'].sum()
+cksmet.stats.sum_cells(cut.ntrial,cut.nplnt)
+```

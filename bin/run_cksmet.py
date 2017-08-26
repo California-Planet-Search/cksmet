@@ -4,6 +4,15 @@ import glob
 import os
 from matplotlib.pylab import *
 import cPickle as pickle
+from collections import OrderedDict
+import cksmet.plotting.smet
+import cksmet.plotting.occur
+import cksmet.plotting.comp
+import cksmet.tables
+import cksmet.calibrate
+import cksmet.plotting.calibrate
+import cksmet.analysis
+import cksmet.io
 
 def main():
     psr = ArgumentParser()
@@ -43,35 +52,31 @@ def main():
 
 
 def calibrate_lamo(args):
-    import cksmet.calibrate
-    import cksmet.plotting.calibrate
     cksmet.calibrate.calibrate_lamo()
     cksmet.plotting.calibrate.validation_lamo()
+
     gcf().savefig('fig_lamo-on-cks.pdf')
     #cksspec.plotting.compare.comparison_three('cks-lamo')
     #gcf().savefig('fig_sm-sx.pdf')
 
 def calc_comp(args):
-    import cksmet.analysis
-    import cksmet.io
     cksmet.io.load_object('comp',cache=2)
 
 def calc_occur(args):
-    import cksmet.io
     print "calc occur"
+    df = cksmet.io.load_object('occur-hot-jup',cache=2)
     df = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=2)
     df = cksmet.io.load_object('occur-nsmet=5',cache=2)
     df = cksmet.io.load_object('occur-nsmet=2',cache=2)
     df = cksmet.io.load_object('occur-nsmet=1',cache=2)
 
 def fit_occur(args):
-    import cksmet.io
     fits = [
         'fit_per-sub-se',
         'fit_per-sup-se',
         'fit_per-sub-sn',
         'fit_per-sup-sn',
-        'fit_per-sup-ss',
+#        'fit_per-sup-ss',
 
         'fit_smet-hot-se',
         'fit_smet-warm-se',
@@ -84,13 +89,7 @@ def fit_occur(args):
     ]
 
     for fit in fits:
-        cksmet.io.load_fit(fit,cache=2)
-
-from collections import OrderedDict
-import cksmet.plotting.smet
-import cksmet.plotting.occur
-import cksmet.plotting.comp
-import cksmet.tables
+        cksmet.io.load_object(fit,cache=2)
 
 def create_table(args):
     w = Workflow()
@@ -107,6 +106,8 @@ def create_val(args):
 def update_paper(args):
     w = Workflow()
     w.update_paper() 
+
+import cksmet.kstest
 
 class Workflow(object):
     def __init__(self):
@@ -128,6 +129,7 @@ class Workflow(object):
         d['cuts-lamost'] = cksmet.tables.cuts_lamost
         d['cuts-planets'] = cksmet.tables.cuts_planets
         d['cuts-field'] = cksmet.tables.cuts_field
+        d['kstest'] = cksmet.kstest.kstest_region
         self.table_dict = d
 
         d = OrderedDict()
@@ -203,7 +205,7 @@ class Workflow(object):
             i+=1
 
         if i==0:
-            assert False, key + " not a valid plot"
+            assert False, key + " not a valid key"
 
     def update_paper(self):
         for kind, d in self.all_dict.iteritems():

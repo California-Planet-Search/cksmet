@@ -75,6 +75,7 @@ def prad_fe():
 
     xlim(0.25,25)
     ylim(-0.9,0.7)
+    gcf().set_tight_layout(True)
 
 def prad_fe_percentiles():
     """Plot of planet radius vs stellar metallicty"""
@@ -112,6 +113,7 @@ def prad_fe_percentiles():
 
     xlim(0.25,25)
     ylim(-0.9,0.7)
+    gcf().set_tight_layout(True)
 
 def prad_fe_mean():
     """Plot of planet radius vs stellar metallicty"""
@@ -567,16 +569,13 @@ def prad_hist_stacked_small(prad_bins=[0.5,1.0,2.0,4.0,8.0,16]):
 
 
 def cuts():
-    df =  cksphys.io.load_table(
-        'cks+nea+iso-floor+huber-phot+furlan',cache=1,
-        cachefn='../CKS-Physical/load_table_cache.hdf'
-    )
+    df =  cksmet.io.load_table('cks-cuts')
 
     cuttypes = cksmet.cuts.plnt_cuttypes
     nrows = len(cuttypes)
 
     nrows = 3
-    ncols = 3
+    ncols = 4
 
     width = ncols * 2.5
     height = nrows * 2.5
@@ -613,6 +612,13 @@ def cuts():
         xlim(0.5,32)
         xt = [0.5,1,2,4,8, 16, 32]
         xticks(xt,xt)
+
+        letter = string.ascii_lowercase[iplot]
+        add_anchored(
+            letter,loc=2, frameon=False, 
+            prop=dict(size='large', weight='bold')
+        )
+        minorticks_off()
         iplot+=1
 
     axL = axL.reshape(nrows,ncols)
@@ -620,17 +626,15 @@ def cuts():
     setp(axL[:,0],ylabel='[Fe/H]')
     fig.set_tight_layout(True)
 
-    for ax, letter in zip(axL.flatten(),string.ascii_lowercase):
-        sca(ax)
-        add_anchored(
-            letter,loc=2, frameon=False, 
-            prop=dict(size='large', weight='bold')
-        )
+    axL = axL.flatten()
+
 
 
 
 def period_prad_slices(mode='tall'):
     sns.set_style('whitegrid')
+    sns.set_color_codes()
+
     yt = [0.5, 1, 2, 4, 8, 16, 32]
     xt = [0.3, 1, 3, 10, 30, 100, 300]
     # smet_bins = [-0.6, -0.4, -0.2, 0.0, +0.2, 0.4]
@@ -707,7 +711,7 @@ def period_prad_slices(mode='tall'):
         plot(plnt.koi_period,plnt.iso_prad, **kw)
         
         # Whole sample for comparison
-        kw = dict(label='',color='Blue', **kwpts)
+        kw = dict(label='',color='b', **kwpts)
         plot(plnt_cut.koi_period,plnt_cut.iso_prad, **kw)
 
         legend(frameon=False,markerscale=0)

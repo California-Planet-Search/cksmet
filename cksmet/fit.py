@@ -22,6 +22,11 @@ class Fit(object):
         return -1.0 * self._loglike(params)
 
     def print_parameters(self,prefix=''):
+        lines = self.to_string()
+        print "\n".join(lines)
+        
+    def to_string(self,prefix=''):
+        lines = []
         chain = self.flatchain
         q = chain.quantile([0.16,0.50,0.84])
         for k in q.columns:
@@ -30,7 +35,9 @@ class Fit(object):
             err1 = s.format(q.ix[0.84,k] - q.ix[0.50,k])
             err2 = s.format(q.ix[0.16,k] - q.ix[0.50,k])
             s = "$%s^{+%s}_{%s}$" % (val, err1,err2)
-            print r"{{{}{}}}{{{}}}".format(prefix,k,s)
+            line = r"{{{}{}}}{{{}}}".format(prefix,k,s)
+            lines.append(line)
+        return lines
 
     def sample(self, x, nsamp,):
         psamples = self.flatchain.sample(nsamp)
@@ -51,10 +58,8 @@ class Fit(object):
         self.pfit = res.params
 
     def mcmc(self, **kwargs):
-        mini = lmfit.Minimizer(self._loglike, self.pfit)
-        res_emcee = mini.emcee(
-            params=self.pfit, seed=1, **kwargs
-        )
+        mini = lmfit.Minimizer(self._loglike, self.pfit, nan_policy ='omit')
+        res_emcee = mini.emcee(params=self.pfit, seed=1, **kwargs)
         self.flatchain = res_emcee.flatchain 
 
     def corner(self):

@@ -44,17 +44,15 @@ def kstest_region():
         dict(name="Warm Super-Earths", per1=10, per2=100, prad1=1.0, prad2=1.7),
         dict(name="Cool Super-Earths", per1=100, per2=350, prad1=1.0, prad2=1.7),
 
-        dict(name="All Jupiters", per1=0.1, per2=350, prad1=8, prad2=24),
-        dict(name="All Sub-Saturns", per1=0.1, per2=350, prad1=4, prad2=8),
-        dict(name="All Sub-Neptunes", per1=0.1, per2=350, prad1=1.7, prad2=4),
-        dict(name="All Super-Earths", per1=0.1, per2=350, prad1=1.0, prad2=1.7),
-        dict(name="All Planets", per1=0.1, per2=350, prad1=0.5, prad2=24),
-
+        dict(name="All Jupiters", per1=.1, per2=350, prad1=8, prad2=24),
+        dict(name="All Sub-Saturns", per1=.1, per2=350, prad1=4, prad2=8),
+        dict(name="All Sub-Neptunes", per1=.1, per2=350, prad1=1.7, prad2=4),
+        dict(name="All Super-Earths", per1=.1, per2=350, prad1=1.0, prad2=1.7),
+        dict(name="All Planets", per1=.1, per2=350, prad1=0.5, prad2=24),
     ]
     boxes = pd.DataFrame(boxes)
     cks = cksmet.io.load_table('cks-cuts',cache=1)
     cks = cks[~cks.isany]
-
     lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=2)
     lamo = lamo[~lamo.isany]
     #lamo = lamo.query('-1 < lamo_smet < 0.5')
@@ -63,6 +61,8 @@ def kstest_region():
     #boxes = boxes.sort_values(by=['per1','prad1'])
     boxes2 = []
     
+
+    lines = []
     for i,row in boxes.iterrows():
         cut = cks[
             cks.koi_period.between(row.per1,row.per2) &
@@ -71,7 +71,7 @@ def kstest_region():
 
         d = calculate_statistics(cut.cks_smet,lamo.lamo_smet)
         d = dict(d, **row)
-        print_statistics(d)
+        lines.append( to_string(d))
 
         boxes2+=[d]
 
@@ -84,10 +84,10 @@ def kstest_region():
     s+="\\nodata & "
     s+="{n:.0f} & {mean:+.3f} & "
     s+="{sem:.3f} & "
-    s+="\\nodata & \\nodata & \nodata \\\\"
+    s+="\\nodata & \\nodata & \\nodata \\\\"
     s=s.format(**d)
-    print s
-    return boxes2 
+    lines.append(s)
+    return lines
 
 def calculate_statistics(smet_plnt, smet_star):
     d = {}
@@ -124,9 +124,15 @@ def calculate_statistics(smet_plnt, smet_star):
 
     return d
 
-def print_statistics(d):
+def to_string(d):
     s = "{name:s} & "
-    s+="{per1:.0f}--{per2:.0f} & "
+
+#    if d['name'].count('All')==0:
+    if True:
+        s+="{per1:.0f}--{per2:.0f} & "
+    else:
+        s+="\\nodata & "
+        
     s+="{prad1:.1f}--{prad2:.1f} & "
     s+="{n:.0f} & {mean:+.3f} & "
     s+="{sem:.3f} & "
@@ -134,5 +140,4 @@ def print_statistics(d):
     s+="{sigstr:s} "
     s+="\\\\"
     s=s.format(**d)
-    print s
-    
+    return s

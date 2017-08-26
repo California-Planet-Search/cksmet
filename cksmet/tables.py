@@ -1,21 +1,15 @@
 import cksmet.io
 import cksmet.tables
 import numpy as np
-import cksphys
 from cksmet.cuts import lamo_cuttypes, plnt_cuttypes, get_cut
 from collections import OrderedDict
-import cksphys.io
 import pandas as pd
-from collections import OrderedDict
 
 def cuts_planets():
     """
     Apply cuts in sucession, count number of stars that pass
     """
-    cks =  cksphys.io.load_table(
-        'cks+nea+iso-floor+huber-phot+furlan',cache=1,
-        cachefn='../CKS-Physical/load_table_cache.hdf'
-    )
+    cks =  cksmet.io.load_table('cks-cuts')
     lines = cut_statistics(cks, 'cks', plnt_cuttypes)
     return lines 
 
@@ -88,7 +82,7 @@ def smet_dist_lamost():
         print r"{:.0f}\% & {:.3f} & {:.3f} \\".format(q*100, cksq.ix[q], lamoq.ix[q])
 
 
-def print_fit_stats():
+def val_fit():
     fits = [
         'fit_per-sub-se',
         'fit_per-sup-se',
@@ -105,18 +99,17 @@ def print_fit_stats():
         'fit_smet-warm-ss',
         'fit_smet-hot-jup',
     ]
-
-        
+    lines = []
     for key in fits:
         _, prefix = key.split('_')
         fit = cksmet.io.load_object(key,cache=1)
-        fit.print_parameters(prefix+'-') 
+        lines += fit.to_string(prefix=prefix+'-')
+    return lines
 
-
-def stats():
+def val_samp():
     d = OrderedDict()
-    cache = 1 
-    cand = cksphys.io.load_table('cks-cuts',cache=cache)
+    cache = 2
+    cand = cksmet.io.load_table('cks-cuts',cache=cache)
     stars = cand.groupby('id_starname',as_index=False).first()
 
     d['n-cand-cks'] = "{}".format( len(cand) )
@@ -128,8 +121,18 @@ def stats():
     d['n-cand-cks-pass'] = "{}".format( len(cand))
     d['n-stars-cks-pass'] = "{}".format( len(stars))
 
-    for k, v in d.iteritems():
-        print r"{{{}}}{{{}}}".format(k,v)
+    field = cksmet.io.load_table('field-cuts',cache=1)
+    d['n-stars-field'] = "{}".format( len(field))
+    field = field[~field.isany]
+    d['n-stars-field-pass'] = "{}".format( len(field))
 
+    d['n-stars-field-pass-eff'] = cksmet.cuts.n_stars_field_pass_eff
+    
+    lines = []
+    for k, v in d.iteritems():
+        line = r"{{{}}}{{{}}}".format(k,v)
+        lines.append(line)
+
+    return lines
 
 

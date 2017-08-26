@@ -17,7 +17,7 @@ def fig_checkerboard():
     prob_det_min = 0.1
     epsilon = 0.0001
 
-    fig,ax = subplots(figsize=(8,6))
+    fig,ax = subplots(figsize=(7,8))
 
     # Completeness contour
     # levels = [prob_det_min,prob_det_min + epsilon]
@@ -34,7 +34,8 @@ def fig_checkerboard():
     ar = log10(ar)
     pcolormesh(X,Y,ar,cmap='YlGn',vmin=-4,vmax=-1)
     #pcolormesh(X,Y,ar,cmap='YlGn',vmin=-4,vmax=-1)
-    colorbar(ticks=[-4,-3,-2,-1])
+    cbar = colorbar(orientation='horizontal',ticks=[-4,-3,-2,-1])
+    cbar.set_label('$\log_{10} (f_{cell})$')
 
     plot(occ.plnt.per,occ.plnt.prad,'.',ms=6,color='Tomato')
     df = ds.to_dataframe()
@@ -51,8 +52,8 @@ def label_checkerboard():
     xt = [0.3,1, 3, 10, 30, 100, 300]
     xticks(xt,xt)
     yticks(yt,yt)
-    xlim(0.1, 1000)
-    ylim(0.3, 40)
+    xlim(0.3,300)
+    ylim(0.5, 32)
     xlabel('Orbital Period (days)')
     ylabel('Planet Size (Earth-radii)')
     minorticks_off()
@@ -195,7 +196,8 @@ def fig_smet_small4():
 def fig_smet_large4():
     fig, axL = subplots(ncols=2,nrows=2,figsize=(8.5,7),sharex=True)
 
-    df = cksmet.io.load_table('occur-nper=2-nsmet=5',cache=1)
+    occ = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=1)
+    df = occ.df
     df = df[df.smetc.between(-0.4,0.4)]
 
     sca(axL[0,0]) 

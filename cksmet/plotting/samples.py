@@ -6,7 +6,6 @@ from matplotlib.pylab import *
 import seaborn as sns
 import pandas as pd
 
-import cksphys.io
 import cksmet.io
 import cksmet.cuts
 from astropy import constants as c
@@ -192,7 +191,7 @@ def lamo_detectability():
 def smet_snr():
     df = pd.read_csv('isoclassify-lamost-dr2.csv')
     huber14 = cksmet.io.load_table('huber14+cdpp',cache=1)
-    lamo = cksmet.io.load_table('lamost-dr2-cuts',cache=1)
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
     lamo = pd.merge(lamo,huber14['id_kic kepmag cdpp3'.split()],on='id_kic')
     df = pd.merge(lamo,df,left_on='id_kic',right_on='id_starname')

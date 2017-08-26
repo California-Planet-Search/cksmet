@@ -166,7 +166,7 @@ def load_occur(key):
     
     elif key=='occur-hot-jup':
         per_bins = [1,10]
-        prad_bins = [1,24]
+        prad_bins = [8,24]
         smet_bins = [-1, 0.5]
         occ = compute_binned_occurrence(
             per_bins, prad_bins, smet_bins
@@ -175,8 +175,8 @@ def load_occur(key):
     return occ
 
 def load_fit(key):
+    print key
     if key.count('fit_smet')==1:
-        # Fit hot SN
         _, dist, size = key.split('-')
         occ = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=1)
         cut = occ.df.ix[dist,size]
@@ -184,23 +184,20 @@ def load_fit(key):
         fit = cksmet.fit.Exponential(cut.smetc, cut.nplnt, cut.ntrial)
         fit.fit()
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
-        fit.print_parameters()
 
     elif key.count('fit_per')==1:
-        # Fit hot SN
-
         _, smet, size = key.split('-')
         occ = cksmet.io.load_object('occur-nsmet=2',cache=1)
         cut = occ.df.ix[size,smet]
-        fit = cksmet.fit.PowerLawCutoff(cut.perc, cut.nplnt, cut.ntrial)
         cut = cut[cut.perc.between(1,350) & (cut.prob_det_mean > 0.25)]
+        fit = cksmet.fit.PowerLawCutoff(cut.perc, cut.nplnt, cut.ntrial)
 
         fit.fit()
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
-        fit.print_parameters()
 
     else:
         assert False, "{} not supported".format(key)
 
+    fit.print_parameters()
     fit.occur = cut
     return fit

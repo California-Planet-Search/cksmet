@@ -9,17 +9,18 @@ from astropy import constants as c
 from astropy import units as u
 
 import cksmet.cuts
-import cksphys.io
-import cksspec.io
 import cksmet.grid
 import cksmet.analysis
+import cksmet.pdplus
+import cksspec.io
+import cksmet.pdplus
 
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
 COMPLETENESS_FILE = os.path.join(DATADIR, 'comp.pkl')
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
-    """Load tables used in cksphys
+    """Load tables used in cksmet
 
     Args:
         table (str): name of table. must be one of
@@ -54,9 +55,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         print "writing table {} to cache".format(table)
         df.to_hdf(cachefn,table)
         return df
-
-    if table=='nea':
-        df = cksphys.io.load_table('nea')
 
     elif table=='cksbin-fe':
         bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 5.7, 8.0, 11.3, 16]
@@ -96,11 +94,13 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         return df
 
     elif table=='cks-cuts':
-        df =  cksphys.io.load_table(
-            'cks+nea+iso-floor+huber-phot+furlan',cache=1,
-            cachefn='../CKS-Physical/load_table_cache.hdf'
-        )
-        cuttypes = 'none notdwarf faint diluted grazing longper badprad'.split()
+        cks = load_table('cks')
+        cks['id_koi'] = cks.id_starname.str.slice(start=1)
+        cks['id_koi'] = pd.to_numeric(cks.id_koi,errors='coerce')
+        furlan2 = load_table('furlan-table2')
+        furlan9 = load_table('furlan-table9')
+        df = pd.merge(cks,furlan2[['id_koi','furlan_ao_obs']],how='left')
+        df = pd.merge(df,furlan9[['id_koi','furlan_rcorr_avg']],how='left')
         df = cksmet.cuts.add_cuts(df, cksmet.cuts.plnt_cuttypes, 'cks')
         
     elif table=='lamost-dr2-cal-cuts':
@@ -125,8 +125,10 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='cdpp':
         fn = os.path.join(DATADIR,'kic_q0_q17.dat')
-        df = idl.readsav(fn)
-        df = pd.DataFrame(df['kic'])
+        df = idl.readsav(fn) 
+        df = df['kic']
+        df = cksmet.pdplus.LittleEndian(df) # Deals with the byte order
+        df = pd.DataFrame(df)
 
     elif table=='huber14+cdpp':
         df = load_table('cdpp',cache=1)
@@ -157,6 +159,29 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
             if q==17:
                 qobs=0
             df['tobs'] += qobs * long_cadence_day * lc_per_quarter[q]
+
+
+    elif table=='furlan-table2':
+        tablefn = os.path.join(DATADIR,'furlan17/Table2.txt')
+        df = pd.read_csv(tablefn,sep='\s+')
+        namemap = {
+            'KOI':'id_koi','KICID':'id_kic','Observatories':'ao_obs'
+        }
+        df = df.rename(columns=namemap)[namemap.values()]
+        df['id_starname'] = ['K'+str(x).rjust(5, '0') for x in df.id_koi] # LMW convert id_koi to id_starname for merge with cks
+        df = add_prefix(df,'furlan_')
+
+    elif table=='furlan-table9':
+        tablefn = os.path.join(DATADIR,'furlan17/Table9.txt')
+        names = """
+        id_koi hst hst_err i i_err 692 692_err lp600 lp600_err jmag jmag_err 
+        kmag kmag_err jkdwarf jkdwarf_err jkgiant jkgiant_err rcorr_avg 
+        rcorr_avg_err
+        """.split()
+
+        df = pd.read_csv(tablefn,sep='\s+',skiprows=2,names=names)
+        df['id_starname'] = ['K'+str(x).rjust(5, '0') for x in df.id_koi] # LMW convert id_koi to id_starname for merge with cks
+        df = add_prefix(df,'furlan_')
 
     else:
         assert False, "table {} not valid table name".format(table)

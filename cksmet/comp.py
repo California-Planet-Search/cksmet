@@ -38,7 +38,6 @@ class Completeness(object):
             impact: maximum impact parameter considered for our sample
         """
         self.stars = stars
-
         # Define the regular grid for interpolation
         x0 = np.array(stars.index) # (nstar)
         x1 = np.log10([3,6,12]) # (3)

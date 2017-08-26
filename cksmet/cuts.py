@@ -4,8 +4,10 @@ Module for dealing with cuts.
 import numpy as np
 import sys
 import inspect
-import cksphys.io
 import cksmet.io
+
+# Effective number of field stars from which the planet sample was drawn.
+n_stars_field_pass_eff = 31272
 
 texdict ={
     'teff':'\\teff',
@@ -18,7 +20,7 @@ plotdict ={
 }
 
 lamo_cuttypes = 'none faint badteff badlogg'.split()
-plnt_cuttypes = 'none faint badteff badlogg lowpsrad longper allfp diluted grazing notdwarf'.split()
+plnt_cuttypes = 'none faint badteff badlogg notdwarf lowpsrad longper allfp diluted grazing smallprad'.split()
 
 samples = 'cks lamo field'.split()
 
@@ -116,7 +118,7 @@ class CutLowPPrad(CutBase):
 
 class CutLowPSrad(CutBase):
     cuttype = 'lowpsrad'
-    texstr = '$\sigma(R_\star) / R_\star < 20\%$'
+    texstr = '$\sigma(R_{\star}) / R_{\star} < 20\%$'
     plotstr = texstr
     def cut(self):
         if self.sample=='cks':
@@ -156,8 +158,22 @@ class CutLongPer(CutBase):
         elif self.sample=='field':
             return self.allpass()
 
+class CutSmallPrad(CutBase):
+    cuttype = 'smallprad'
+    plotstr = '$R_P$ > 0.5 $R_{\oplus}$'
+    texstr = plotstr
+    def cut(self):
+        if self.sample=='cks':
+            b1 = self.df['iso_prad'] < 0.5
+            b2 = self.df['iso_prad'].isnull()
+            return b1 | b2
+        elif self.sample=='lamo':
+            return self.allpass()
+        elif self.sample=='field':
+            return self.allpass()
+
 class CutNotDwarf(CutBase):
-    """Remove stars with a FP designation from a number of catalogs
+    """
     """
     cuttype = 'notdwarf'
     plotstr = 'Dwarf star'
@@ -172,8 +188,13 @@ class CutNotDwarf(CutBase):
             b2 = (srad < 0.8) 
             return b1 | b2
         elif self.sample=='field':
-            return self.allpass()
-
+            srad = self.df['huber_srad']
+            logsrad = np.log10(srad)
+            steff = self.df['huber_steff']
+            b1 = logsrad > 0.00025 * (steff - 5500) + 0.2
+            #b2 = (srad < 0.8) | (srad > 1.2)
+            b2 = (srad < 0.8) 
+            return b1 | b2
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 
