@@ -195,13 +195,15 @@ def smet_snr():
     lamo = lamo[~lamo.isany]
     lamo = pd.merge(lamo,huber14['id_kic kepmag cdpp3'.split()],on='id_kic')
     df = pd.merge(lamo,df,left_on='id_kic',right_on='id_starname')
+
     fig = figure(figsize=(4,4))
+    semilogy()
     srad = df.iso_srad * c.R_sun
     prad = 1 * c.R_earth
     df['snr'] = (prad / srad)**2 / (1e-6 * df.cdpp3)
     plot(df.lamo_smet,df.snr,',')
 
-    bins = arange(-0.6,0.41,0.2,)
+    bins = arange(-0.3,0.31,0.15,)
     g = df.groupby(pd.cut(df.lamo_smet,bins))
     i = 0
     for interval, snr in g['snr'].median().iteritems():
@@ -212,14 +214,11 @@ def smet_snr():
         i+=1
         print interval.left,interval.right, snr
 
-    xlim(-1,0.6)
+    xlim(-0.4,0.4)
     ylim(0.1,10)
-    semilogy()
+    yt = [0.1,0.3,1,3,10]
+    yticks(yt,yt)
     xlabel('[Fe/H] (dex)')
-    ylabel('Per Transit SNR \n(1 $\mathregular{R}_\mathregular{E}$ planet)')
+    ylabel('Single Transit SNR')
     fig.set_tight_layout(True)
-
-
     return fig
-
-

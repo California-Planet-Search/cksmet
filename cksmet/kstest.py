@@ -136,7 +136,7 @@ def to_string(d):
     s+="{prad1:.1f}--{prad2:.1f} & "
     s+="{n:.0f} & {mean:+.3f} & "
     s+="{sem:.3f} & "
-    s+="\\num{{{ttest_stat:.2e}}} & < \\num{{{ttest_pval_max:.2e}}} & "
+    s+="\\num{{{ttest_stat:.1e}}} & < \\num{{{ttest_pval_max:.0e}}} & "
     s+="{sigstr:s} "
     s+="\\\\"
     s=s.format(**d)

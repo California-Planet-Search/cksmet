@@ -120,6 +120,7 @@ def val_samp():
 
     d['n-cand-cks-pass'] = "{}".format( len(cand))
     d['n-stars-cks-pass'] = "{}".format( len(stars))
+    d['n-stars-cks-pass-smet<-0.4'] = "{}".format( len(stars.query('cks_smet < -0.4')))
 
     field = cksmet.io.load_table('field-cuts',cache=1)
     d['n-stars-field'] = "{}".format( len(field))

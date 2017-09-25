@@ -85,7 +85,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.read_hdf(fn, 'lamost-dr2-cal')
 
     elif table=='cks':
-        df = pd.read_csv('../CKS-Physical/data/cks_physical_merged.csv')
+        df = pd.read_csv('/Users/petigura/Research/CKS-Physical/data/cks_physical_merged.csv')
 
     elif table=='lamost-dr2+cks':
         cks = load_table('cks')

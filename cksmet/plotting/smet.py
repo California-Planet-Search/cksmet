@@ -24,77 +24,60 @@ def prad_fe_label():
     xlabel('Planet size (Earth-radii)')
     ylabel('[Fe/H]')
     xticks(rpticks,rpticks)
+    xlim(0.5,25)
+    ylim(-0.6,0.5)
 
 def prad_fe_errbar():
     cks = cksmet.io.load_table('cks-cuts')
-    ebarx = 14
-    ebary = -0.7
+    ebarx = 12.
+    ebary = -0.5
     xferr = (cks.iso_prad_err1 / cks.iso_prad).median()    
     xerr = [[ ebarx - ebarx/(1+xferr) ], [ebarx*(1+xferr) - ebarx]]
     yerr = [[0.04],[0.04]]
-    errorbar([ebarx], [ebary], yerr=yerr, xerr=xerr,fmt='o')
-    annotate( 
-        xy=(ebarx,ebary), s='Median   \nUncert.   ',ha='right', 
-        va='baseline'
-    )
+    s='Median   \nUncert.   '
+    errorbar([ebarx], [ebary], yerr=yerr, xerr=xerr,fmt='o',zorder=10)
+    errorbar([ebarx], [ebary], yerr=yerr, xerr=xerr,fmt='o',lw=0,ms=0,label=s)
+    legend(markerscale=0,frameon=True,scatterpoints=0,loc='lower right')
 
 def bins_to_xerr(bin0,binc,bin1):
     xerr = [[np.array(binc - bin0)], [np.array(bin1 - binc)] ]
     xerr = np.vstack(xerr)
     return xerr
 
+def _plot_prad_fe(cks, **kw):
+    x = np.array(cks.iso_prad)
+    y = np.array(cks.cks_smet)
+    plot(x,y,'.', **kw)
+    
 def prad_fe():
     """Plot of planet radius vs stellar metallicty"""
     cks = cksmet.io.load_table('cks-cuts', cache=1)
-    xk = 'binc'
     yk = 'cks_smet'
     cks = cks[~cks.isany]
-#    bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 5.7, 8.0, 11.3, 16]
     bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 8.0, 16]
-#    bins = [0.5, 1.7, 4.0, 8.0, 16]
     cksbin = cksmet.io.table_bin(cks, bins, yk)
 
     figure(figsize=(6,4))
-
     semilogx()
-    plot(cks.iso_prad,cks.cks_smet,'.')
+    _plot_prad_fe(cks)
     prad_fe_label()
     prad_fe_errbar()
-
     yk = 'cks_smet_mean'
     yerrk = 'cks_smet_mean_err'
-
-    i = 0 
-    for _i, row in cksbin.iterrows():
-        x = np.sqrt(row.bin0*row.bin1)
-        xerr = [[x - row.bin0], [row.bin1 - x] ]
-        yerr = row[yerrk]
-        y = row[yk]
-        errorbar(x,y,xerr=xerr,yerr=yerr,color='r',zorder=10)
-        i+=1
-
-    xlim(0.25,25)
-    ylim(-0.9,0.7)
     gcf().set_tight_layout(True)
 
 def prad_fe_percentiles():
     """Plot of planet radius vs stellar metallicty"""
     cks = cksmet.io.load_table('cks-cuts', cache=1)
     cks = cks[~cks.isany]
-
     bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 8.0, 16]
-
     xk = 'binc'
     yk = 'cks_smet'
     yerrk = 'cks_smet_mean_err'
-
-
     cksbin = cksmet.io.table_bin(cks, bins, yk)
-
     figure(figsize=(6,4))
     semilogx()
-
-    plot(cks.iso_prad,cks[yk],'.',color='LightGray')
+    _plot_prad_fe(cks,color='LightGray')
     prad_fe_label()
 
     i = 0 
@@ -108,11 +91,8 @@ def prad_fe_percentiles():
         yk = 'cks_smet'
         for p in [25,75]:
             pk = yk+'_{:02d}'.format(p)
-            errorbar(x,row[pk],xerr=xerr,color='b',zorder=10)
+            errorbar(x,row[pk],xerr=xerr,color='m',zorder=10)
         i+=1
-
-    xlim(0.25,25)
-    ylim(-0.9,0.7)
     gcf().set_tight_layout(True)
 
 def prad_fe_mean():
@@ -629,20 +609,16 @@ def cuts():
     axL = axL.flatten()
 
 
-
-
 def period_prad_slices(mode='tall'):
     sns.set_style('whitegrid')
     sns.set_color_codes()
 
     yt = [0.5, 1, 2, 4, 8, 16, 32]
     xt = [0.3, 1, 3, 10, 30, 100, 300]
-    # smet_bins = [-0.6, -0.4, -0.2, 0.0, +0.2, 0.4]
-    # smet_bins = [-0.8, -0.3, 0.4]
 
     # Provision figure
-    height = 3
-    width = 3.5
+    height = 3.75
+    width = 4
     if mode=='four-equal-smet':
         smet_bins = [-0.75, -0.45, -0.15, 0.15, 0.45]
         
@@ -663,10 +639,10 @@ def period_prad_slices(mode='tall'):
     if mode=='four-equal-stars':
         smet_bins = [-10, -0.115, 0.013, 0.121, 10]
         labels = [
-            '[Fe/H] < -0.11 dex',
-            '[Fe/H] = -0.12--0.01 dex',
-            '[Fe/H] = 0.01--0.12',
-            '[Fe/H] > 0.12 dex',
+            '[Fe/H] < $-0.11$',
+            '[Fe/H] = ($-$0.12,$-$0.01)',
+            '[Fe/H] = ($-$0.01,$+$0.12)',
+            '[Fe/H] > $+$0.12',
         ]
         nrows = 2
         ncols = 2
@@ -702,11 +678,10 @@ def period_prad_slices(mode='tall'):
         f_stars = 1.0 * len(lamo_cut) / len(lamo)
 
         label = labels[i]
-        label += "\nf(pl) = {:.0f}%".format(100*f_planet)
-        label += "\nf(st) = {:.0f}%".format(100*f_stars)
+        label += "\n$f_p = {:.0f}\%$".format(100*f_planet)
 
         # Whole sample for comparison
-        kwpts = dict(marker='o',ms=3, lw=0)
+        kwpts = dict(marker='o',ms=4, lw=0)
         kw = dict(label=label,color='LightGray', **kwpts)
         plot(plnt.koi_period,plnt.iso_prad, **kw)
         
@@ -714,12 +689,28 @@ def period_prad_slices(mode='tall'):
         kw = dict(label='',color='b', **kwpts)
         plot(plnt_cut.koi_period,plnt_cut.iso_prad, **kw)
 
-        legend(frameon=False,markerscale=0)
+        legend(frameon=True,markerscale=0,framealpha=0.5,fontsize='small',handletextpad=-2,loc='upper right')
         yticks(yt,yt)
         xticks(xt,xt)
         i+=1
 
-    xlim(0.1,1000)
-    ylim(0.25,64)
+
+    for ax, letter in zip(axL.flatten(),string.ascii_lowercase):
+        sca(ax)
+        add_anchored(
+            letter,loc=2, frameon=False, 
+            prop=dict(size='large', weight='bold')
+        )
+
+    sca(axL[0])
+    ebarx = sqrt(3) * 100.
+    ebary = 0.7
+    yferr = 0.1
+    yerr = [[ ebary - ebary/(1+yferr) ], [ebary*(1+yferr) - ebary]]
+    xerr = [[0.00],[0.00]]
+    errorbar([ebarx], [ebary], yerr=yerr, zorder=10, fmt='o',c='g',ms=4)
+
+    xlim(0.3,1000)
+    ylim(0.5,32)
     fig.set_tight_layout(True)
     #fig.savefig('paper/fig_')

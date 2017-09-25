@@ -49,6 +49,7 @@ def compare_prob_det_direct_interp(comp):
     fig.set_tight_layout(True)
 
 def fig_prob_detect_transit():
+    sns.set_style('whitegrid')
     comp = cksmet.io.load_object('comp',cache=1)
 
     ds = comp.grid.ds
@@ -65,14 +66,14 @@ def fig_prob_detect_transit():
     loglog()
     ds['prob_det'].plot.contourf(**kw)
     label()
-    grid()
+    #grid()
 
     sca(axL[1])
     loglog()
     kw['levels'] = [0.000,0.001,0.010,0.020,0.050,0.100]
     ds['prob_trdet'].plot.contourf(**kw)
     label()
-    grid()
+    #grid()
 
     setp(axL,xlim=(1,300),ylim=(0.5,32))
     fig.set_tight_layout(True)
