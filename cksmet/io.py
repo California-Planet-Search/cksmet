@@ -97,15 +97,25 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         cks = load_table('cks')
         cks['id_koi'] = cks.id_starname.str.slice(start=1)
         cks['id_koi'] = pd.to_numeric(cks.id_koi,errors='coerce')
+
+        m17 = load_table('mathur17')
+
         furlan2 = load_table('furlan-table2')
         furlan9 = load_table('furlan-table9')
-        df = pd.merge(cks,furlan2[['id_koi','furlan_ao_obs']],how='left')
+
+        df = pd.merge(cks,m17)
+        df = pd.merge(df,furlan2[['id_koi','furlan_ao_obs']],how='left')
         df = pd.merge(df,furlan9[['id_koi','furlan_rcorr_avg']],how='left')
+
         df = cksmet.cuts.add_cuts(df, cksmet.cuts.plnt_cuttypes, 'cks')
         
     elif table=='lamost-dr2-cal-cuts':
         # Apply similar set of cuts to the lamost sample.
         df = load_table('lamost-dr2-cal')
+
+        m17 = load_table('mathur17')
+        df = pd.merge(df,m17)
+
         cuttypes = cksmet.cuts.lamo_cuttypes
         df = cksmet.cuts.add_cuts(df, cuttypes, 'lamo')
 
@@ -118,9 +128,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = lamo
 
     elif table=='field-cuts':
-        # Apply similar set of cuts to the KIC sample
-        df = load_table('huber14+cdpp',cache=1)
-        cuttypes = cksmet.cuts.plnt_cuttypes
+        df = load_table('mathur17+cdpp',cache=1)
+        cuttypes = cksmet.cuts.field_cuttypes
         df = cksmet.cuts.add_cuts(df, cuttypes, 'field')
 
     elif table=='cdpp':
@@ -129,27 +138,37 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = df['kic']
         df = cksmet.pdplus.LittleEndian(df) # Deals with the byte order
         df = pd.DataFrame(df)
-
-    elif table=='huber14+cdpp':
-        df = load_table('cdpp',cache=1)
         df = df.rename(columns={
             'KEPMAG':'kepmag','KICID':'id_kic','CDPP3':'cdpp3','CDPP6':'cdpp6',
             'CDPP12':'cdpp12'}
         )
         df = df['id_kic kepmag cdpp3 cdpp6 cdpp12'.split()]
-        cdpp = np.vstack(df.ix[:,'cdpp3'])
         for col in 'cdpp3 cdpp6 cdpp12'.split():
             cdpp = np.vstack(df.ix[:,col])
             cdpp[cdpp==0.0] = np.nan
             cdpp = np.nanmedian(cdpp,axis=1)
             df[col] = cdpp
             df['log'+col] = np.log10(cdpp)
-
-        huber14 = cksspec.io.load_table('huber14')
-        stellar17 = cksspec.io.load_table('stellar17')
-        df = pd.merge(df,huber14)
-        df = pd.merge(df,stellar17)
         
+    elif table=='mathur17+cdpp':
+        m17 = load_table('mathur17')
+        cdpp = load_table('cdpp')
+        df = pd.merge(m17,cdpp)
+
+    elif table=='huber14+cdpp':
+        m17 = load_table('mathur17')
+        h14 = load_table('huber14')
+        cdpp = load_table('cdpp')
+        df = pd.merge(m17,cdpp)
+        df = pd.merge(df,h14)
+
+    elif table=='mathur17':
+        df = cksspec.io.load_table('stellar17')
+        namemap = {}
+        for col in list(df.columns):
+            if col[:3]=='kic':
+                namemap[col] = col.replace('kic','m17')
+        df = df.rename(columns=namemap)
         # add place holder column for quarter zero
         df['st_quarters'] = '0'+df.st_quarters 
         df['tobs'] = 0
@@ -160,6 +179,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
                 qobs=0
             df['tobs'] += qobs * long_cadence_day * lc_per_quarter[q]
 
+    elif table=='huber14':
+        df = cksspec.io.load_table('huber14')
+        
 
     elif table=='furlan-table2':
         tablefn = os.path.join(DATADIR,'furlan17/Table2.txt')

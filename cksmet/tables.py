@@ -1,7 +1,7 @@
 import cksmet.io
 import cksmet.tables
 import numpy as np
-from cksmet.cuts import lamo_cuttypes, plnt_cuttypes, get_cut
+import cksmet.cuts
 from collections import OrderedDict
 import pandas as pd
 
@@ -10,23 +10,26 @@ def cuts_planets():
     Apply cuts in sucession, count number of stars that pass
     """
     cks =  cksmet.io.load_table('cks-cuts')
-    lines = cut_statistics(cks, 'cks', plnt_cuttypes)
+    cuttypes = cksmet.cuts.plnt_cuttypes
+    lines = cut_statistics(cks, 'cks', cuttypes)
     return lines 
 
 def cuts_field():
     """
     Apply cuts in sucession, count number of stars that pass
     """
-    stars = cksmet.io.load_table('huber14+cdpp',cache=1)
-    lines = cut_statistics(stars, 'field', plnt_cuttypes)
+    stars = cksmet.io.load_table('field-cuts',cache=1)
+    cuttypes = cksmet.cuts.field_cuttypes
+    lines = cut_statistics(stars, 'field', cuttypes)
     return lines
 
 def cuts_lamost():
     """
     Apply cuts in sucession, count number of stars that pass
     """
-    lamo = cksmet.io.load_table('lamost-dr2-cal',cache=1)
-    lines = cut_statistics(lamo, 'lamo', lamo_cuttypes)
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    cuttypes = cksmet.cuts.lamo_cuttypes
+    lines = cut_statistics(lamo, 'lamo', cuttypes)
     return lines
 
 def cut_statistics(df, sample, cuttypes):
@@ -36,7 +39,7 @@ def cut_statistics(df, sample, cuttypes):
     npassall = np.sum(count==0)
     npassallprev = np.sum(count==0)
     for cuttype in cuttypes:
-        obj = get_cut(cuttype)
+        obj = cksmet.cuts.get_cut(cuttype)
         cut = obj(df,sample)
         b = cut.cut()
         npass = (b.astype(int)==False).sum()
@@ -46,7 +49,7 @@ def cut_statistics(df, sample, cuttypes):
         # pass all cuts
         f_pass_current = float(npassall) / float(npassallprev) 
         f_pass_all = float(npassall) / nall # pass all cuts
-        line = r"{: <35} & {: <5} & {: <5} & {:.2f} \\".format(
+        line = r"{: <35} & {: <5} & {: <5} & {:.3f} \\".format(
             cut.texstr, npass, npassall, f_pass_current
         )
         lines.append(line)

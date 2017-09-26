@@ -46,7 +46,7 @@ def load_completeness():
 
     field = cksmet.io.load_table('field-cuts',cache=1)
     field = field.query('~isany')
-    field = field.rename(columns={'huber_srad':'srad','huber_smass':'smass'})
+    field = field.rename(columns={'m17_srad':'srad','m17_smass':'smass'})
     field.index = field.id_kic
 
     comp_per_bins = per_bins_dict['xfine']

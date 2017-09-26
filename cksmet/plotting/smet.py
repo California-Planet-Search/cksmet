@@ -554,7 +554,7 @@ def cuts():
     cuttypes = cksmet.cuts.plnt_cuttypes
     nrows = len(cuttypes)
 
-    nrows = 3
+    nrows = 2
     ncols = 4
 
     width = ncols * 2.5

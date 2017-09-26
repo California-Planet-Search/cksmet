@@ -28,72 +28,80 @@ def samples():
     ncols = 3
     nrows = 3
     height = 2.5 * nrows
-    width = 3 * ncols
+    width = 3.0 * ncols
     fig, axL = subplots(nrows=nrows, ncols=ncols, figsize=(width, height))
 
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=2)
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=0)
     lamoc = lamo[~lamo.isany]
 
-    cks = cksmet.io.load_table('cks-cuts',cache=1)
+    cks = cksmet.io.load_table('cks-cuts',cache=0)
     cksc = cks.query('isany==False')
     
     cks = cks.groupby('id_kic').first()
     cksc = cksc.groupby('id_kic').first()
-
     
-    field = cksmet.io.load_table('huber14+cdpp',cache=1)
-
-    field = cksmet.cuts.add_cuts(field, cksmet.cuts.plnt_cuttypes, 'field')
+    field = cksmet.io.load_table('field-cuts',cache=0)
     fieldc = field.query('isany==False')
 
-    plotkw = dict(marker='o',ms=1.5,lw=0)
+
+    kwpts = dict(color='LightGray',rasterized=True,marker='o',ms=1.5,lw=0)
+    kwptsc = dict(color='b',rasterized=True,marker='o',ms=1.5,lw=0)
+
     bins = np.arange(9,16.0001,0.2)
-    histkw = dict(bins=bins,histtype='stepfilled')
+    histkw = dict(bins=bins,histtype='stepfilled',color='LightGray')
+    histkwc = dict(bins=bins,histtype='stepfilled',color='b')
     
     bins = np.arange(-1.0,0.5001,0.1)
-    smethistkw = dict(bins=bins,histtype='stepfilled')
+    smethistkw = dict(bins=bins,histtype='stepfilled',color='LightGray')
+    smethistkwc = dict(bins=bins,histtype='stepfilled',color='b')
 
     jcks = 0
     jfield = 1 
     jlamo = 2
 
+    ihr = 0 
+    ikepmag = 1 
+    ismet = 2
+
     # HR diagrams
     sca(axL[0,jcks])
-    plot(cks.cks_steff, cks.cks_slogg, color='LightGray',**plotkw)
-    plot(cksc.cks_steff, cksc.cks_slogg,color='b',**plotkw)
+    plot(cks.cks_steff, cks.cks_slogg, **kwpts)
+    plot(cksc.cks_steff, cksc.cks_slogg, **kwptsc)
 
     sca(axL[0,jfield])
     print list(field.columns)
-    plot(field.huber_steff, field.huber_slogg, color='LightGray',rasterized=True,**plotkw)
-    plot(fieldc.huber_steff, fieldc.huber_slogg,color='b',rasterized=True,**plotkw)
+    plot(field.m17_steff, field.m17_slogg, **kwpts)
+    plot(fieldc.m17_steff, fieldc.m17_slogg, **kwptsc)
 
     sca(axL[0,2])
-    plot(lamo.lamo_steff, lamo.lamo_slogg,color='LightGray',**plotkw)
-    plot(lamoc.lamo_steff, lamoc.lamo_slogg,color='b',**plotkw)
+    plot(lamo.lamo_steff, lamo.lamo_slogg,**kwpts)
+    plot(lamoc.lamo_steff, lamoc.lamo_slogg,**kwptsc)
 
     # KepMag
     sca(axL[1,jcks])
-    hist(cks.kic_kepmag,color='LightGray',**histkw)
-    hist(cksc.kic_kepmag,color='b',**histkw)
+    hist(cks.kic_kepmag,**histkw)
+    hist(cksc.kic_kepmag,**histkwc)
 
     sca(axL[1,jfield])
-    hist(field.kepmag,color='LightGray',**histkw)
-    hist(fieldc.kepmag,color='b',**histkw)
+    hist(field.kepmag,**histkw)
+    hist(fieldc.kepmag,**histkwc)
 
     sca(axL[1,2])
-    hist(lamo.kic_kepmag,color='LightGray',**histkw)
-    hist(lamoc.kic_kepmag,color='b',**histkw)
+    hist(lamo.kic_kepmag,**histkw)
+    hist(lamoc.kic_kepmag,**histkwc)
     
     # Metal
-    
-    sca(axL[2,jcks])
-    hist(cks.cks_smet.dropna(),color='LightGray',**smethistkw)
-    hist(cksc.cks_smet.dropna(),color='b',**smethistkw)
+    sca(axL[ismet,jcks])
+    hist(cks.cks_smet.dropna(),**smethistkw)
+    hist(cksc.cks_smet.dropna(),**smethistkwc)
 
+    sca(axL[ismet,jfield])
+    hist(field.m17_smet.dropna(),**smethistkw)
+    hist(fieldc.m17_smet.dropna(),**smethistkwc)
 
-    sca(axL[2,2])
-    hist(lamo.lamo_smet,color='LightGray',**smethistkw)
-    hist(lamoc.lamo_smet,color='b',**smethistkw)
+    sca(axL[ismet,jlamo])
+    hist(lamo.lamo_smet,**smethistkw)
+    hist(lamoc.lamo_smet,**smethistkwc)
 
     setp(
         axL[0,:], xlim=(7000,4000), ylim=(5,3.0), xlabel='Teff (K)', 

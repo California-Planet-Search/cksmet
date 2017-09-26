@@ -7,7 +7,7 @@ import inspect
 import cksmet.io
 
 # Effective number of field stars from which the planet sample was drawn.
-n_stars_field_pass_eff = 31272
+n_stars_field_pass_eff = 33020
 
 texdict ={
     'teff':'\\teff',
@@ -19,8 +19,9 @@ plotdict ={
     'logg':'\log g'
 }
 
-lamo_cuttypes = 'none faint badteff badlogg'.split()
-plnt_cuttypes = 'none faint badteff badlogg notdwarf lowpsrad longper allfp diluted grazing smallprad'.split()
+plnt_cuttypes = 'none faint badteffphot badloggphot longper allfp diluted grazing'.split()
+lamo_cuttypes = 'none faint badteffphot badloggphot'.split()
+field_cuttypes = 'none faint badteffphot badloggphot'.split()
 
 samples = 'cks lamo field'.split()
 
@@ -46,8 +47,8 @@ class CutNone(CutBase):
 
 class CutFaint(CutBase):
     cuttype = 'faint'
-    plotstr = '$Kp$ < 14.2'
-    texstr = '$Kp$ < 14.2'
+    plotstr = '$Kp$ < 14.2 mag'
+    texstr = '$Kp$ < 14.2 mag'
     def cut(self):
         if self.sample=='cks':
             kepmag = self.df['kic_kepmag']
@@ -59,10 +60,10 @@ class CutFaint(CutBase):
         b = kepmag > 14.2
         return b
 
-class CutTeff(CutBase):
+class CutTeffSpec(CutBase):
     """Remove stars where Teff falls outside allowed range
     """
-    cuttype = 'badteff'
+    cuttype = 'badteffspec'
     texstr = r'${teff:}$ = $4700-6500$ K'.format(**texdict)
     plotstr = r'${teff:}$ = 4700$-$6500 K'.format(**plotdict)
     def cut(self):
@@ -70,16 +71,31 @@ class CutTeff(CutBase):
             teff = self.df['cks_steff']
         elif self.sample=='lamo':
             teff = self.df['lamo_steff']
-        elif self.sample=='field':
-            teff = self.df['huber_steff']
 
         b = ~teff.between(4700,6500)
         return b
 
-class CutLogg(CutBase):
+class CutTeffPhot(CutBase):
+    """Remove stars where Teff falls outside allowed range
+    """
+    cuttype = 'badteffphot'
+    texstr = r'${teff:}$ = $4700-6500$ K'.format(**texdict)
+    plotstr = r'${teff:}$ = 4700$-$6500 K'.format(**plotdict)
+    def cut(self):
+        if self.sample=='cks':
+            teff = self.df['m17_steff']
+        elif self.sample=='lamo':
+            teff = self.df['m17_steff']
+        elif self.sample=='field':
+            teff = self.df['m17_steff']
+
+        b = ~teff.between(4500,6500)
+        return b
+
+class CutLoggSpec(CutBase):
     """Remove stars where logg falls outside allowed range
     """
-    cuttype = 'badlogg'
+    cuttype = 'badloggspec'
     texstr = '${logg:}$ = $3.9-5.0$ dex'.format(**texdict)
     plotstr = 'log g = 3.9$-$5.0 dex'.format(**plotdict)
     def cut(self):
@@ -89,6 +105,22 @@ class CutLogg(CutBase):
             logg = self.df['lamo_slogg']
         elif self.sample=='field':
             logg = self.df['huber_slogg']
+        b = ~logg.between(3.9,5.0)
+        return b
+
+class CutLoggPhot(CutBase):
+    """Remove stars where logg falls outside allowed range
+    """
+    cuttype = 'badloggphot'
+    texstr = '${logg}$ = $3.9-5.0$ dex'.format(**texdict)
+    plotstr = 'log g = 3.9$-$5.0 dex'.format(**plotdict)
+    def cut(self):
+        if self.sample=='cks':
+            logg = self.df['m17_slogg']
+        elif self.sample=='lamo':
+            logg = self.df['m17_slogg']
+        elif self.sample=='field':
+            logg = self.df['m17_slogg']
         b = ~logg.between(3.9,5.0)
         return b
 
@@ -148,8 +180,8 @@ class CutGrazing(CutBase):
 
 class CutLongPer(CutBase):
     cuttype = 'longper'
-    plotstr = '$P$ < 350 d'
-    texstr = '$P$ < 350 d'
+    plotstr = '$P$ < 350 days'
+    texstr = '$P$ < 350 days'
     def cut(self):
         if self.sample=='cks':
             return self.df['koi_period'] > 350
