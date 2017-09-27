@@ -134,6 +134,7 @@ class Workflow(object):
         d['cuts-lamost'] = cksmet.tables.cuts_lamost
         d['cuts-planets'] = cksmet.tables.cuts_planets
         d['cuts-field'] = cksmet.tables.cuts_field
+        d['smet-stats'] = cksmet.tables.smet_stats
         d['kstest'] = cksmet.kstest.kstest_region
         self.table_dict = d
 

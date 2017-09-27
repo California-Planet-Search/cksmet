@@ -57,34 +57,41 @@ def cut_statistics(df, sample, cuttypes):
 
     return lines
 
-def smet_dist_lamost():
+def smet_stats():
     """
     Apply cuts in sucession, count number of stars that pass
     """
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=0)
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
+
+    field = cksmet.io.load_table('field-cuts',cache=1)
+    field = field.query('isany==False')
 
     cks = cksmet.io.load_table('cks-cuts',cache=1)
     cks = cks.query('isany==False')
     
-    quantiles = [0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99]
+    quantiles = [0.25, 0.5, 0.75]
     cks = cks.cks_smet
     lamo = lamo.lamo_smet
+    field = field.m17_smet
+
     lamoq = lamo.quantile(quantiles)
     cksq = cks.quantile(quantiles)
+    fieldq = field.quantile(quantiles)
 
-    print r"% statistic, CKS, LAMOST"
-    print r"Mean & {:.3f} & {:.3f} \\".format(cks.mean(), lamo.mean())
-    print r"St. Dev. & {:.3f} & {:.3f} \\".format(cks.std(), lamo.std())
-    print r"St. Err. Mean & {:.3f} & {:.3f} \\".format(
-        cks.std()/np.sqrt(len(cks)), lamo.std()/np.sqrt(len(lamo))
+    lines = []
+    lines.append(r"Mean & {:.3f} & {:.3f} & {:.3f} \\".format(cks.mean(), field.mean(), lamo.mean()))
+    lines.append(r"St. Dev. & {:.3f} & {:.3f}  & {:.3f} \\".format(cks.std(), field.std(), lamo.std()))
+    func = lambda x : x.std()/np.sqrt(len(x))
+    lines.append(r"St. Err. Mean & {:.3f} & {:.3f} & {:.3f} \\".format(
+        func(cks), func(field), func(lamo)
+    )
     )
 
-
     for q, smet in lamoq.iteritems():
-        print r"{:.0f}\% & {:.3f} & {:.3f} \\".format(q*100, cksq.ix[q], lamoq.ix[q])
-
-
+        lines.append(r"{:.0f}\% & {:.3f} & {:.3f} & {:.3f} \\".format(q*100, cksq.ix[q], fieldq.ix[q], lamoq.ix[q]))
+    
+    return lines
 def val_fit():
     fits = [
         'fit_per-sub-se',
