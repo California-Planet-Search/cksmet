@@ -3,6 +3,13 @@
 ## Calibrate the LAMOST metallicities to the CKS scale
 
 run_cksmet.py calibrate-lamo
+run_cksmet.py create-plot lamo-on-cks
+
+## Apply cuts and create samples
+
+run_cksmet.py create-samples
+run_cksmet.py create-plot prad-smet-cut
+run_cksmet.py stellar-samples 
 
 ## Calc Completeness
 

@@ -5,12 +5,19 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 import scipy.integrate
+from scipy.stats import gamma
+
 from astropy import constants as c
 from astropy import units as u
 
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
+
+
+__STARS_REQUIRED_COLUMNS__ = (
+    "logcdpp3 logcdpp6 logcdpp12 tobs smass srad".split()
+)
 
 class Completeness(object):
     """
@@ -28,7 +35,7 @@ class Completeness(object):
                 - logcdpp3: three hour CDPP
                 - logcdpp6: six
                 - logcdpp12: twelve
-                - tobserved: days in which target was observed
+                - tobs: days in which target was observed
                 - smass: Stellar mass (solar masses) 
                 - srad: Stellar radius (solar-radii) 
             grid (Grid): Grid object that contains boundaries of bins.
@@ -37,7 +44,16 @@ class Completeness(object):
                 - fulton-gamma: Fulton et al. fit to gamma function.
             impact: maximum impact parameter considered for our sample
         """
+        
+        for col in __STARS_REQUIRED_COLUMNS__:
+            assert list(stars.columns).count(col)==1,\
+                "required column {} missing".format(col)
+
+            assert stars[col].notnull().all(),\
+                "column {} cannot contain nulls".format(col)
+
         self.stars = stars
+
         # Define the regular grid for interpolation
         x0 = np.array(stars.index) # (nstar)
         x1 = np.log10([3,6,12]) # (3)
@@ -216,7 +232,7 @@ class Completeness(object):
                 _prob_det = fulton_gamma(snr).sum() 
                 _prob_det/=self.nstars
         else:
-            _prob_det = self.prob_det_interp(per, prad, grid=False)
+            _prob_det = self.prob_det_interp(per, prad)
 
         return _prob_det
 
@@ -287,6 +303,8 @@ class Completeness(object):
 
     def compute_grid_prob_det(self,verbose=0):
         """Compute a grid of detection probabilities"""
+
+        print "Compute a grid of detection probabilities"
         def rowfunc(row):
             return self.prob_det(row.perc, row.pradc)
 
@@ -299,6 +317,8 @@ class Completeness(object):
 
     def compute_grid_prob_tr(self,verbose=0):
         """Compute a grid of transit probabilities"""
+
+        print "Compute a grid of transit probabilities"
         def rowfunc(row):
             return self.prob_tr(row.perc)
 
@@ -320,14 +340,19 @@ class Completeness(object):
         return df['temp'].to_xarray()
 
     def init_prob_det_interp(self):
-        """
+        """Intialize detection probability interpolator
         """
         # Define the regular grid for interpolation
         x0 = np.array(self.grid.ds.per)
         x1 = np.array(self.grid.ds.prad)
         points  = (x0, x1) 
         values = self.grid.ds['prob_det'].transpose('per','prad')
-        self.prob_det_interp = RectBivariateSpline(x0, x1, values)
+        self._prob_det_interp_spline = RectBivariateSpline(x0, x1, values)
+        
+    def prob_det_interp(self, per, prad):
+        _prob_det =  self._prob_det_interp_spline(per, prad)
+        assert np.isfinite(_prob_det), " error in computing transit prob"
+        return _prob_det
 
     def mean_prob_trdet(self, per1, per2, prad1, prad2):
         logper1 = np.log(per1)
@@ -357,7 +382,6 @@ class Completeness(object):
         prob_det_mean = res[0] / area
         return prob_trdet_mean, prob_det_mean
 
-from scipy.stats import gamma
 def fulton_gamma(snr):
     k = 17.56 
     l = 1.00 

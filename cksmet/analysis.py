@@ -47,7 +47,12 @@ def load_completeness():
     field = cksmet.io.load_table('field-cuts',cache=1)
     field = field.query('~isany')
     field = field.rename(columns={'m17_srad':'srad','m17_smass':'smass'})
-    field.index = field.id_kic
+
+    # Some photometric properties have null values, drop
+    n1 = len(field)
+    field = field.dropna(subset=cksmet.comp.__STARS_REQUIRED_COLUMNS__)
+    n2 = len(field)
+    print "{}/{} stars remain after droping nulls ".format(n2,n1)
 
     comp_per_bins = per_bins_dict['xfine']
     comp_prad_bins = prad_bins_dict['xfine']
@@ -56,8 +61,8 @@ def load_completeness():
     grid = cksmet.grid.Grid(comp_bins_dict,spacing_dict)
 
     comp = cksmet.comp.Completeness(field, grid, method, impact)
-    comp.compute_grid_prob_det()
-    comp.compute_grid_prob_tr()
+    comp.compute_grid_prob_det(verbose=True)
+    comp.compute_grid_prob_tr(verbose=True)
     comp.init_prob_det_interp()
     return comp
 
@@ -66,7 +71,7 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
 
     print "Initializing occurrence object"
     comp = cksmet.io.load_object('comp',cache=1)
-    cks = cksmet.io.load_table('cks-cuts')
+    cks = cksmet.io.load_table('cks-cuts',cache=1)
     cks = cks[~cks.isany]
     cks = cks.dropna(subset=['iso_prad'])
     namemap = {
@@ -76,7 +81,7 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     }
     plnt = cks.rename(columns=namemap)
 
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts')
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
     smet_field = lamo.lamo_smet
     occur = cksmet.occur.Occurrence(plnt, comp, nstars, smet_field=smet_field)
@@ -116,13 +121,13 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     return occur
 
 def load_occur(key):
+    print "Loading occurrence object {}".format(key)
+
     if key=='occur-test':
         per_bins = [1,10,100]
         prad_bins = [1,4,16]
         smet_bins = [-1, 0, 0.5]
-        occ = compute_binned_occurrence(
-            per_bins, prad_bins, smet_bins
-        )
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
 
     elif key=='occur-nsmet=5':
         per_bins = per_bins_dict['four-per-decade']
@@ -138,9 +143,7 @@ def load_occur(key):
         per_bins = per_bins_dict['four-per-decade']
         prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
         smet_bins = [-1, 0, 0.5] 
-        occ = compute_binned_occurrence(
-            per_bins, prad_bins, smet_bins
-        )
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
         occ.df = pd.merge(occ.df, size, left_on='prad1',right_index=True)
         occ.df = pd.merge(occ.df, smet, left_on='smet1',right_index=True)
         occ.df.set_index(['size', 'smet'], inplace=True)
@@ -149,9 +152,7 @@ def load_occur(key):
         per_bins = [1, 10, 100]
         prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
         smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
-        occ = compute_binned_occurrence(
-            per_bins, prad_bins, smet_bins
-        )
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
         occ.df = pd.merge(occ.df,dist,left_on='per1',right_index=True)
         occ.df = pd.merge(occ.df,size,left_on='prad1',right_index=True)
         occ.df.set_index(['dist', 'size'], inplace=True)
@@ -168,9 +169,7 @@ def load_occur(key):
         per_bins = [1,10]
         prad_bins = [8,24]
         smet_bins = [-1, 0.5]
-        occ = compute_binned_occurrence(
-            per_bins, prad_bins, smet_bins
-        )
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
     
     return occ
 

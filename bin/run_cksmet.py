@@ -13,6 +13,7 @@ import cksmet.calibrate
 import cksmet.plotting.calibrate
 import cksmet.analysis
 import cksmet.io
+import cksmet.kstest
 
 def main():
     psr = ArgumentParser()
@@ -21,6 +22,9 @@ def main():
 
     psr2 = subpsr.add_parser('calibrate-lamo', parents=[psr_parent])
     psr2.set_defaults(func=calibrate_lamo)
+
+    psr2 = subpsr.add_parser('create-samples', parents=[psr_parent])
+    psr2.set_defaults(func=create_samples)
 
     psr2 = subpsr.add_parser('calc-comp', parents=[psr_parent])
     psr2.set_defaults(func=calc_comp)
@@ -53,17 +57,18 @@ def main():
 
 def calibrate_lamo(args):
     cksmet.calibrate.calibrate_lamo()
-    cksmet.plotting.calibrate.validation_lamo()
 
-    gcf().savefig('fig_lamo-on-cks.pdf')
-    #cksspec.plotting.compare.comparison_three('cks-lamo')
-    #gcf().savefig('fig_sm-sx.pdf')
+def create_samples(args):
+    df = cksmet.io.load_table('cks-cuts',cache=2)
+    df = cksmet.io.load_table('field-cuts',cache=2)
+    df = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=2)
 
 def calc_comp(args):
     cksmet.io.load_object('comp',cache=2)
 
 def calc_occur(args):
     print "calc occur"
+    df = cksmet.io.load_object('occur-test',cache=2) # just to make sure things are working
     df = cksmet.io.load_object('occur-hot-jup',cache=2)
     df = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=2)
     df = cksmet.io.load_object('occur-nsmet=5',cache=2)
@@ -107,15 +112,15 @@ def update_paper(args):
     w = Workflow()
     w.update_paper() 
 
-import cksmet.kstest
 
 class Workflow(object):
     def __init__(self):
         d = OrderedDict()
+        d['lamo-on-cks'] = cksmet.plotting.calibrate.validation_lamo
         d['prad-smet-cuts'] = cksmet.plotting.smet.cuts
+        d['stellar-samples'] = cksmet.plotting.samples.samples
         d['prad-fe'] = cksmet.plotting.smet.prad_fe
         d['prad-fe-percentiles'] = cksmet.plotting.smet.prad_fe_percentiles
-        d['stellar-samples'] = cksmet.plotting.samples.samples
         d['per-prad-slices-equal-stars'] = lambda : cksmet.plotting.smet.period_prad_slices(mode='four-equal-stars')
         d['smet-snr'] = cksmet.plotting.samples.smet_snr
         d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
