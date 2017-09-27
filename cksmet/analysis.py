@@ -63,7 +63,7 @@ def load_completeness():
     comp = cksmet.comp.Completeness(field, grid, method, impact)
     comp.compute_grid_prob_det(verbose=True)
     comp.compute_grid_prob_tr(verbose=True)
-    comp.init_prob_det_interp()
+    comp.create_splines()
     return comp
 
 def compute_binned_occurrence(per_bins, prad_bins, smet_bins):

@@ -339,15 +339,19 @@ class Completeness(object):
             i+=1
         return df['temp'].to_xarray()
 
-    def init_prob_det_interp(self):
+    def create_splines(self):
         """Intialize detection probability interpolator
         """
         # Define the regular grid for interpolation
-        x0 = np.array(self.grid.ds.per)
-        x1 = np.array(self.grid.ds.prad)
-        points  = (x0, x1) 
-        values = self.grid.ds['prob_det'].transpose('per','prad')
-        self._prob_det_interp_spline = RectBivariateSpline(x0, x1, values)
+        x0 = np.log(np.array(self.grid.ds.per))
+        x1 = np.log(np.array(self.grid.ds.prad))
+        points = (x0, x1) 
+
+        prob_det = self.grid.ds['prob_det'].transpose('per','prad')
+        prob_trdet = self.grid.ds['prob_tr'] * self.grid.ds['prob_det'] 
+        prob_trdet = prob_trdet.transpose('per','prad')
+        self._prob_trdet_spline = RectBivariateSpline(x0, x1, prob_trdet)
+        self._prob_det_spline = RectBivariateSpline(x0, x1, prob_det)
         
     def prob_det_interp(self, per, prad):
         _prob_det =  self._prob_det_interp_spline(per, prad)
@@ -355,31 +359,18 @@ class Completeness(object):
         return _prob_det
 
     def mean_prob_trdet(self, per1, per2, prad1, prad2):
-        logper1 = np.log(per1)
-        logper2 = np.log(per2)
-        logprad1 = np.log(prad1)
-        logprad2 = np.log(prad2)
-        opts={'epsabs':1e-3,'epsrel':1e-3}
-        limits = [[logper1, logper2],[logprad1,logprad2]]
-        area = (logper2-logper1) * (logprad2-logprad1)
-        kw = dict(full_output=True,opts=opts)
+        """Mean probability of transiting and being detected"""
+        x1 = np.log(per1)
+        x2 = np.log(per2)
+        y1 = np.log(prad1)
+        y2 = np.log(prad2)
 
-        def _prob_det(logper, logprad):
-            per = np.exp(logper)
-            prad = np.exp(logprad)
-            prob_det = self.prob_det(per,prad,interp=True)
-            return prob_det
+        area = (x2-x1) * (y2-y1)
+        integral = self._prob_trdet_spline.integral(x1, x2, y1, y2)
+        prob_trdet_mean = integral / area
 
-        def _prob_trdet(logper, logprad):
-            prob_det = _prob_det(logper, logprad)
-            prob_tr = self.prob_tr(np.exp(logper))
-            prob_trdet = prob_det * prob_tr
-            return prob_trdet
-
-        res = scipy.integrate.nquad(_prob_trdet, limits, **kw)
-        prob_trdet_mean = res[0] / area
-        res = scipy.integrate.nquad(_prob_det, limits, **kw)
-        prob_det_mean = res[0] / area
+        integral = self._prob_det_spline.integral(x1, x2, y1 ,y2)
+        prob_det_mean = integral / area
         return prob_trdet_mean, prob_det_mean
 
 def fulton_gamma(snr):
