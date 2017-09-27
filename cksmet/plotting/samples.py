@@ -31,16 +31,16 @@ def samples():
     width = 3.0 * ncols
     fig, axL = subplots(nrows=nrows, ncols=ncols, figsize=(width, height))
 
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=0)
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
     lamoc = lamo[~lamo.isany]
 
-    cks = cksmet.io.load_table('cks-cuts',cache=0)
+    cks = cksmet.io.load_table('cks-cuts',cache=1)
     cksc = cks.query('isany==False')
     
     cks = cks.groupby('id_kic').first()
     cksc = cksc.groupby('id_kic').first()
     
-    field = cksmet.io.load_table('field-cuts',cache=0)
+    field = cksmet.io.load_table('field-cuts',cache=1)
     fieldc = field.query('isany==False')
 
 
