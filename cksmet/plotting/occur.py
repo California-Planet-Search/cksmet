@@ -9,7 +9,24 @@ import cksmet.analysis
 import cksmet.occur
 
 sns.set_style('ticks')
+#sns.set_palette('bright')
 sns.set_color_codes()
+
+colordict = {'se':'g','sn':'b','ss':'y','jup':'r'}
+namedict = {
+    'se':'Super-Earths',
+    'sn':'Sub-Neptunes',
+    'ss':'Sub-Saturns',
+    'jup':'Jupiters'
+}
+
+sizedict = {
+    'se':'$R_P$ = 1.0$-$1.7 $R_E$',
+    'sn':'$R_P$ = 1.7$-$4.0 $R_E$',
+    'ss':'$R_P$ = 4.0$-$8.0 $R_E$',
+    'jup':'$R_P$ = 8.0$-$24.0 $R_E$'
+}
+
 
 def fig_checkerboard():
     occ  = cksmet.io.load_object('occur-nsmet=1') 
@@ -89,19 +106,6 @@ def annotate_checkerboard(df,print_ul=False):
             ]
         )
 
-    '''
-    for key in regions.keys():
-        box = regions[key]
-        xy = np.array([box[0][0],box[1][0]])
-        width = box[0][1] - box[0][0]
-        height = box[1][1] - box[1][0]
-        at =  matplotlib.patches.Rectangle(
-            xy, width, height,ec='k',lw=2, fc='none'
-        )
-        ax.add_artist(at)
-    '''
-# Occurrence period
-
 def per(occur,**kw):
     yerr = np.array(occur['rate_err2 rate_err1'.split()]).T
     yerr[0] *= -1 
@@ -125,110 +129,229 @@ def per_sample(key,**kw):
 def fig_per_small2():
     fig,axL = subplots(ncols=2,figsize=(8.5,4),sharex=True,sharey=True)
     sca(axL[0])
-    per_sample('fit_per-sub-se',color='b',label='< 0')
-    per_sample('fit_per-sup-se',color='g',label='> 0')
+    per_sample('fit_per-sub-se',color='b',label='[Fe/H] < 0')
+    per_sample('fit_per-sup-se',color='g',label='[Fe/H] > 0')
     title('Super-Earths')
-    legend(title='[Fe/H]',frameon=True)
+    legend(frameon=True)
     fig_label("a")
 
+    ylabel('Planets Per 100 Stars')
+    yticks_planets_per_100_stars()
+
     sca(axL[1])
-    per_sample('fit_per-sub-sn',color='b',label='< 0')
-    per_sample('fit_per-sup-sn',color='g',label='> 0')
+    per_sample('fit_per-sub-sn',color='b',label='[Fe/H] < 0')
+    per_sample('fit_per-sup-sn',color='g',label='[Fe/H] > 0')
     title('Sub-Neptunes')
-    legend(title='[Fe/H]',frameon=True)
+    legend(frameon=True)
     fig_label("b")
+    yticks_planets_per_100_stars()
 
     xt = [1,3,10,30,100,300]
     xticks(xt,xt)
+    yticks_planets_per_100_stars()
     setp(axL, xlabel='Period (days)', ylim=(3e-4,1), xlim = (1,300))
-    setp(axL[0], ylabel='Planets Per Star')
     fig.set_tight_layout(True)
 
-def smet(occur,**kw):
+def plot_rates(xk, occur, **kw):
+    """
+    Args
+        xk (str): x value
+        occur (pd.DataFrame): must contain rate, rate_err1, rate_err2
+    """
+
+    ebkw1 = dict(fmt='o',ms=6,mew=2,mfc='w',capsize=6,capthick=2,zorder=4,**kw)
+    ebkw2 = dict(**ebkw1)
+    ebkw2['mfc'] = 'none'
+    ebkw2['zorder'] = 5
+    ebkw2['lw'] = 0
+    ebkw2['zorder'] = 5
+    ulkw = dict(marker='v',mfc='w',mew=2,lw=0,zorder=6,**kw)
+
     yerr = np.array(occur['rate_err2 rate_err1'.split()]).T
     yerr[0] *= -1 
+
     semilogy()
-    errorbar(occur.smetc,occur.rate,yerr=yerr,fmt='o',**kw)
-    if kw.has_key('label'):
-        kw['label'] = ''
-    plot(occur.smetc,occur.rate_ul,marker='v',lw=0,**kw)
+
+    x = occur[xk]
+    y = occur.rate
+    errorbar(x,y,yerr=yerr, **ebkw1)
+    errorbar(x,y,yerr=yerr, **ebkw2)
+
+    occurul = occur.dropna(subset=['rate_ul'])
+    if len(occurul) >0:
+        plot(x,occur.rate_ul,**ulkw)
+
 
 def smet_sample(key, **kw):
     fit = cksmet.io.load_object(key)
-    smet(fit.occur,**kw)
+    #smet(fit.occur,**kw)
     smeti = np.linspace(-0.4,0.4,100)
     fit_samples = fit.sample(smeti,1000)
     fit_best = fit.model(fit.pfit,smeti)
     p16, p50, p84 = np.percentile(fit_samples,[16,50,84],axis=0)
-    fill_between(smeti, p16, p84, color='pink',zorder=1)
-    plot(smeti,fit_best,color='r',alpha=1)
+    fill_between(smeti, p16, p84, alpha=0.5,**kw)
+    plot(smeti,fit_best,**kw)
 
-def fig_smet_small4():
-    fig, axL = subplots(ncols=2,nrows=2,figsize=(8.5,7),sharex=True)
-    sca(axL[0,0]) 
-    smet_sample('fit_smet-hot-se',color='b',)
-    title('Hot Super-Earths')
-    fig_label("a")
+def persmet_sample(key, **kw):
+    fit = cksmet.io.load_object(key)
+    #smet(fit.occur,**kw)
 
-    sca(axL[0,1]) 
-    smet_sample('fit_smet-hot-sn',color='b',)
-    title('Hot Sub-Neptunes')
-    fig_label("b")
+    smet1 = -0.4
+    smet2 = 0.4
+    smeti = linspace(smet1,smet2,10)
+    smetwidth = 0.2
+    psamples = fit.sample_chain(100)
 
-    sca(axL[1,0]) 
-    smet_sample('fit_smet-warm-se',color='b',)
-    title('Warm Super-Earths')
-    fig_label("c")
+    # Integrate over the period axis
+    def model(params):
+        fit_sample = []
+        for _smeti in smeti:
+            _smet1 = _smeti - 0.5*smetwidth
+            _smet2 = _smeti + 0.5*smetwidth
 
-    sca(axL[1,1]) 
-    smet_sample('fit_smet-warm-sn',color='b',)
-    title('Warm Sub-Neptunes')
-    fig_label("d")
+            _per1 = 1
+            _per2 = 10
+            lims = [[_per1,_per2],[_smet1,_smet2]]
+            val = cksmet.fit.per_powerlaw_smet_exp_integral(params,lims)
+            val = val / smetwidth # divide by the size of the bin
+            fit_sample.append(val)
+        fit_sample = np.array(fit_sample)
+        return fit_sample
 
-    setp(axL[1,:],xlabel='[Fe/H] (dex)')
-    setp(axL[:,0],ylabel='Planets Per Star')
+    fit_samples = []
+    for i, params in psamples.iterrows():
+        fit_samples.append(model(params))
+    fit_samples = np.vstack(fit_samples)
+
+    p = fit.pfit.valuesdict()
+    fit_best = model(p)
+    print fit_best
+    p16, p50, p84 = np.percentile(fit_samples,[16,50,84],axis=0)
+    fill_between(smeti, p16, p84, alpha=0.5,**kw)
+    plot(smeti,fit_best,**kw)
     
-    setp(axL[1,:],ylim=(1e-1,6e-1))
-    setp(axL[0,:],ylim=(1e-3,1e-1))
-    fig.set_tight_layout(True)
-    xlim(-0.4,0.4)
-
-def fig_smet_large4():
-    fig, axL = subplots(ncols=2,nrows=2,figsize=(8.5,7),sharex=True)
-
+def fig_smet_warm():
+    # We plot the histograms for 0.2 dex bins, but the bin widths used
+    # in the max-likelihood modeling are given in.
     occ = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=1)
     df = occ.df
     df = df[df.smetc.between(-0.4,0.4)]
+    cut = df.ix['warm','se']
+    smet(cut,color='g')
+    smet_sample('fit_smet-warm-se',color='g')
 
-    sca(axL[0,0]) 
-    cut = df.ix['hot','ss']
+    cut = df.ix['warm','sn']
     smet(cut,color='b',)
-    title('Hot Sub-Saturns')
-    fig_label("a")
+    smet_sample('fit_smet-warm-sn',color='b')
 
-    sca(axL[0,1]) 
-    smet_sample('fit_smet-warm-ss',color='b')
-    title('Warm Sub-Saturns')
-    fig_label("b")
+    cut = df.ix['warm','ss']
+    smet(cut,color='y',)
+    smet_sample('fit_smet-warm-ss',color='y',)
 
-    sca(axL[1,0]) 
-    smet_sample('fit_smet-hot-jup',color='b',)
-    title('Hot Jupiters')
-    fig_label("c")
-
-    sca(axL[1,1]) 
     cut = df.ix['warm','jup']
-    smet(cut,color='b')
-    title('Warm Jupiters')
-    fig_label("d")
+    smet(cut,color='r',)
 
-    setp(axL[1,:],xlabel='[Fe/H] (dex)')
-    setp(axL[:,0],ylabel='Planets Per Star')
+    ylabel('Planets Per 100 Stars')
+    ylim(1e-3,1)
+
+
+def sum_cells_per(df0):
+    df2 = []
+    for smetc in df0.smetc.drop_duplicates():
+        df = df0[df0.smetc==smetc] 
+        rate = cksmet.stats.sum_cells(df.ntrial,df.nplnt)
+        rate['smetc'] = smetc
+        df2.append(rate)
     
-    setp(axL[0,:],ylim=(3e-4,3e-1))
-    setp(axL[1,:],ylim=(1e-4,1e-1))
+    df2 = pd.DataFrame(df2)
+    return df2
+
+
+def fig_smet_hot():
+    '''
+    occ = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=1)
+    df = occ.df
+    df = df[df.smetc.between(-0.4,0.4)]
+    cut = df.ix['hot','se']
+    smet(cut,color='g')
+    '''
+    #occur = cksmet.io.load_object('occur-nsmet=5')
+    binwper = 0.25
+    key = 'occur-per={:f}-prad=physical-smet=0.2'.format(binwper)
+    occur = cksmet.io.load_object(key)
+
+    cut = occur.df.query('1 < perc < 10 and 1.0 < pradc < 1.7')
+    cut = sum_cells_per(cut)
+    plot_rates('smetc',cut,color='g')
+    persmet_sample('fit_persmet-hot-se',color='g')
+
+    cut = occur.df.query('1 < perc < 10 and 1.7 < pradc < 4.0')
+    cut = sum_cells_per(cut)
+    plot_rates('smetc',cut,color='b')
+    persmet_sample('fit_persmet-hot-sn',color='b')
+
+
+    occur = cksmet.io.load_object('occur-nsmet=5')
+    '''
+    cut = occur.df.query('1 < perc < 10 and 4.0 < pradc < 8.0')
+    cut = sum_cells_per(cut)
+    plot_rates('smetc',cut,color='y')
+    smet_sample('fit_smet-hot-ss',color='y')
+
+    cut = occur.df.query('1 < perc < 10 and 8.0 < pradc < 24.0')
+    cut = sum_cells_per(cut)
+    plot_rates('smetc',cut,color='r')
+    smet_sample('fit_smet-hot-jup',color='r')
+    '''
+
+    '''
+    cut = df.ix['hot','sn']
+    smet(cut,color='b',)
+    persmet_sample('fit_persmet-hot-sn',color='b')
+
+    cut = df.ix['hot','ss']
+    smet(cut,color='y',)
+
+    cut = df.ix['hot','jup']
+    smet(cut,color='r',)
+    smet_sample('fit_smet-hot-jup',color='r')
+    
+    ylabel('Planets Per 100 Stars')
+    ylim(1e-3,1)
+    '''
+
+def yticks_planets_per_100_stars():
+    yt = np.array([1e-4,3,3e-4,1e-3,3e-3,1e-2,3e-2,1e-1,3e-1,1])
+    syt = map(lambda x: x if x < 1 else "%.0f" % x , yt*100)
+    yticks(yt,syt)
+
+def fig_smet():
+    fig, axL = subplots(ncols=2,nrows=1,figsize=(8,7),sharex=True,sharey=True)
+    sca(axL[0])
+    fig_smet_hot()
+
+    yticks_planets_per_100_stars()
+    title('$P = 1-10$ days')
+    fig_label('a')
+
+    sca(axL[1])
+    fig_smet_warm()
+    yticks_planets_per_100_stars()
+    ylim(1e-4,1)
+    ylabel('')
+    fig_label('b')
+    title('$P = 10-100$ days')
+    
     fig.set_tight_layout(True)
     xlim(-0.4,0.4)
+    setp(axL, xlabel='[Fe/H]')
+
+    sca(axL[0])
+    i = 1
+    for size in 'se sn ss jup'.split():
+        s =  "\n"*i + namedict[size] 
+        text(0.1, 1, s, color=colordict[size],va='top',ha='left')
+        i+=1
 
 def add_anchored(*args,**kwargs):
     """

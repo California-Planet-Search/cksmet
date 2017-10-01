@@ -6,20 +6,12 @@ import cksmet.grid
 import cksmet.comp
 import cksmet.occur
 import cksmet.fit
-# Commonly used qualitative indecies
-dist = pd.DataFrame(
-    index=[1.0,10,300], data=['hot','warm','cool'], columns=['dist']
-)
-size = pd.DataFrame(
-    index=[1.0,1.7,4.0,8.0],data=['se','sn','ss','jup',],columns=['size']
-)
-smet = pd.DataFrame(index=[-1,0],data=['sub','sup'],columns=['smet'])
 
 # Some nice, convenient grids
 per_bins_dict = {
-# sqrt2 
+    # sqrt2 
     'xfine': np.round(np.logspace(np.log10(0.1),np.log10(1000),33),4),
-# sqrt2 
+    # sqrt2 
     'fine': [ 
         1.00, 1.41, 2.00,  2.83,  4.00, 5.66, 8.00,  
         11.3, 16., 22.6, 32.0, 45.3, 64.0, 90.5, 128., 
@@ -35,10 +27,21 @@ prad_bins_dict = {
     'xfine': np.round(np.logspace(np.log10(0.5),np.log10(32),49 ),2),
     'fine': np.round(np.logspace(np.log10(0.5),np.log10(32),25 ),2),
     'two-per-octave': 2**np.arange(-1,5.001,0.5),
+    'physical': [1.0,1.7,4.0,8.0,24.0],
     'coarse': [ 
          0.5,  0.71, 1.00, 1.41, 2.0, 2.83, 4.00, 5.66, 8.0, 11.31, 16.0
     ]
 }
+
+# Commonly used qualitative indecies
+dist = pd.DataFrame(
+    index=[1.0,10,300], data=['hot','warm','cool'], columns=['dist']
+)
+size = pd.DataFrame(
+    index=[1.0,1.7,4.0,8.0],data=['se','sn','ss','jup',],columns=['size']
+)
+smet = pd.DataFrame(index=[-1,0],data=['sub','sup'],columns=['smet'])
+
 
 def load_completeness():
     method = 'fulton-gamma' # treatment for planet detectability
@@ -88,8 +91,8 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
 
     print "Define occurrence grid"
 
-    bins_dict = {'per': per_bins,'prad': prad_bins,'smet':smet_bins}
-    spacing_dict = {'per':'log','prad':'log','smet':'linear'}
+    bins_dict = {'per':per_bins, 'prad': prad_bins, 'smet':smet_bins}
+    spacing_dict = {'per':'log', 'prad':'log', 'smet':'linear'}
     grid = cksmet.grid.Grid(bins_dict,spacing_dict)
 
     print "Loop over occurrence grid"
@@ -120,8 +123,40 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
     occur.df = out
     return occur
 
+def set_index(occ, mode):
+    df = occ.df
+    if mode=='dist-size':
+        df = pd.merge(df, dist,left_on='per1',right_index=True)
+        df = pd.merge(df, size,left_on='prad1',right_index=True)
+        df.set_index(['dist', 'size'], inplace=True)
+
+    if mode=='size-smet':
+        df = pd.merge(df, size,left_on='prad1',right_index=True)
+        df = pd.merge(df, smet,left_on='smet1',right_index=True)
+        df.set_index(['size', 'smet'], inplace=True)
+
+    if mode=='size':
+        df = pd.merge(df, size,left_on='prad1',right_index=True)
+        df.set_index(['size'], inplace=True)
+
+    occ.df = df
+    return occ
+    
 def load_occur(key):
     print "Loading occurrence object {}".format(key)
+
+
+    if key.count('occur-per=')==1:
+        _, per, prad, smet = key.split('-')
+
+        per = float(per.replace('per=',''))
+        smet = float(smet.replace('smet=',''))
+        eps = 1e-3
+
+        per_bins = np.exp(np.arange(0,np.log(350)+eps,per))
+        prad_bins = prad_bins_dict['physical']
+        smet_bins = np.arange(-0.4,0.4+eps,smet)
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
 
     if key=='occur-test':
         per_bins = [1,10,100]
@@ -131,39 +166,70 @@ def load_occur(key):
 
     elif key=='occur-nsmet=5':
         per_bins = per_bins_dict['four-per-decade']
-        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
+        prad_bins = prad_bins_dict['physical']
         smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
         occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
 
-        occ.df = pd.merge(occ.df,dist,left_on='per1',right_index=True)
-        occ.df = pd.merge(occ.df,size,left_on='prad1',right_index=True)
-        occ.df.set_index(['dist', 'size'], inplace=True)
+    elif key=='occur-nsmet=10':
+        per_bins = per_bins_dict['four-per-decade']
+        prad_bins = prad_bins_dict['physical']
+        smet_bins = np.arange(-0.6, 0.4001,0.1)
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+
+    elif key=='occur-nsmet=20':
+        per_bins = per_bins_dict['four-per-decade']
+        prad_bins = prad_bins_dict['physical']
+        smet_bins = np.arange(-0.6, 0.4001,0.05)
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+
 
     elif key=='occur-nsmet=2':
         per_bins = per_bins_dict['four-per-decade']
-        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
+        prad_bins = prad_bins_dict['physical']
         smet_bins = [-1, 0, 0.5] 
         occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
-        occ.df = pd.merge(occ.df, size, left_on='prad1',right_index=True)
-        occ.df = pd.merge(occ.df, smet, left_on='smet1',right_index=True)
-        occ.df.set_index(['size', 'smet'], inplace=True)
+        occ = set_index(occ, 'size-smet')
 
     elif key=='occur-nper=2-nsmet=5':
         per_bins = [1, 10, 100]
-        prad_bins = [1.0, 1.7, 4.0, 8.0, 24.0]
+        prad_bins = prad_bins_dict['physical']
         smet_bins = [-0.6, -0.4, -0.2, 0.0, 0.2, 0.4] 
         occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
-        occ.df = pd.merge(occ.df,dist,left_on='per1',right_index=True)
-        occ.df = pd.merge(occ.df,size,left_on='prad1',right_index=True)
-        occ.df.set_index(['dist', 'size'], inplace=True)
+        occ = set_index(occ, 'dist-size')
+
+    elif key=='occur-nper=2-nsmet=10':
+        per_bins = [1, 10, 100]
+        prad_bins = prad_bins_dict['physical']
+        smet_bins = np.arange(-0.6, 0.4001,0.1)
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+        occ = set_index(occ, 'dist-size')
+
+    elif key=='occur-nper=2-nsmet=20':
+        per_bins = [1, 10, 100]
+        prad_bins = prad_bins_dict['physical']
+        smet_bins = np.arange(-0.6, 0.4001,0.05)
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+        occ = set_index(occ, 'dist-size')
+
+    elif key=='occur-nper=2-nsmet=40':
+        per_bins = [1, 10, 100]
+        prad_bins = prad_bins_dict['physical']
+        smet_bins = np.arange(-0.6, 0.4001,0.025)
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+        occ = set_index(occ, 'dist-size')
+
+    elif key=='occur-nper=2-nsmet=80':
+        per_bins = [1, 10, 100]
+        prad_bins = prad_bins_dict['physical']
+        smet_bins = np.arange(-0.6, 0.4001,0.0125)
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+        occ = set_index(occ, 'dist-size')
 
     elif key=='occur-nsmet=1':
         per_bins = per_bins_dict['four-per-decade']
         prad_bins = prad_bins_dict['two-per-octave']
         smet_bins = [-1, 0.5]
-        occ = compute_binned_occurrence(
-            per_bins, prad_bins, smet_bins
-        )
+        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
     
     elif key=='occur-hot-jup':
         per_bins = [1,10]
@@ -175,21 +241,44 @@ def load_occur(key):
 
 def load_fit(key):
     print key
-    if key.count('fit_smet')==1:
+    if key.count('fit_smet-')==1:
         _, dist, size = key.split('-')
-        occ = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=1)
+        occ = cksmet.io.load_object('occur-nper=2-nsmet=40',cache=1)
         cut = occ.df.ix[dist,size]
         cut = cut[cut.smetc.between(-0.4,0.4)]
         fit = cksmet.fit.Exponential(cut.smetc, cut.nplnt, cut.ntrial)
         fit.fit()
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
 
-    elif key.count('fit_per')==1:
+    elif key.count('fit_per-')==1:
         _, smet, size = key.split('-')
         occ = cksmet.io.load_object('occur-nsmet=2',cache=1)
         cut = occ.df.ix[size,smet]
         cut = cut[cut.perc.between(1,350) & (cut.prob_det_mean > 0.25)]
         fit = cksmet.fit.PowerLawCutoff(cut.perc, cut.nplnt, cut.ntrial)
+
+        fit.fit()
+        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
+
+    elif key.count('fit_persmet-')==1:
+        _, dist, size = key.split('-')
+        binwper = 0.25
+        occkey = 'occur-per={:f}-prad=physical-smet=0.2'.format(binwper)
+        occ = cksmet.io.load_object(occkey)
+        occ = set_index(occ,'size')
+        cut = occ.df.ix[size]
+        cut = cut[cut.perc.between(1,10) & (cut.prob_det_mean > 0.25)]
+        x = cut['perc smetc'.split()]
+        nplnt = cut[['nplnt']]
+        ntrial = cut[['ntrial']]
+
+        fit = cksmet.fit.PerPowerLawExpSmetExp(x, nplnt, ntrial)
+        if (key.count('se')==1) or (key.count('sn')==1):
+            fit.p0['alpha'].value = 1.7
+            fit.p0['binwper'].value = binwper
+        if (key.count('ss')==1) or (key.count('jup')==1):
+            fit.p0['alpha'].value = -0.0001
+            fit.p0['binwper'].value = binwper
 
         fit.fit()
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)

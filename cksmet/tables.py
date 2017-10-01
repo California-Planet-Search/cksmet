@@ -98,7 +98,6 @@ def val_fit():
         'fit_per-sup-se',
         'fit_per-sub-sn',
         'fit_per-sup-sn',
-        'fit_per-sup-ss',
 
         'fit_smet-hot-se',
         'fit_smet-warm-se',

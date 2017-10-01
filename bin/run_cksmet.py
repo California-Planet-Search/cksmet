@@ -69,11 +69,17 @@ def calc_comp(args):
 def calc_occur(args):
     print "calc occur"
     df = cksmet.io.load_object('occur-test',cache=2) # just to make sure things are working
-    df = cksmet.io.load_object('occur-hot-jup',cache=2)
-    df = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=2)
+#    df = cksmet.io.load_object('occur-hot-jup',cache=2)
+#    df = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=2)
+#    df = cksmet.io.load_object('occur-nper=2-nsmet=10',cache=2)
+#    df = cksmet.io.load_object('occur-nper=2-nsmet=20',cache=2)
+#    df = cksmet.io.load_object('occur-nper=2-nsmet=40',cache=2)
+#    df = cksmet.io.load_object('occur-nper=2-nsmet=80',cache=2)
+#    df = cksmet.io.load_object('occur-nsmet=1',cache=2)
+#    df = cksmet.io.load_object('occur-nsmet=2',cache=2)
     df = cksmet.io.load_object('occur-nsmet=5',cache=2)
-    df = cksmet.io.load_object('occur-nsmet=2',cache=2)
-    df = cksmet.io.load_object('occur-nsmet=1',cache=2)
+    df = cksmet.io.load_object('occur-nsmet=10',cache=2)
+    df = cksmet.io.load_object('occur-nsmet=20',cache=2)
 
 def fit_occur(args):
     fits = [
@@ -81,7 +87,6 @@ def fit_occur(args):
         'fit_per-sup-se',
         'fit_per-sub-sn',
         'fit_per-sup-sn',
-#        'fit_per-sup-ss',
 
         'fit_smet-hot-se',
         'fit_smet-warm-se',
@@ -118,6 +123,7 @@ class Workflow(object):
         d = OrderedDict()
         d['lamo-on-cks'] = cksmet.plotting.calibrate.validation_lamo
         d['prad-smet-cuts'] = cksmet.plotting.smet.cuts
+        d['occur-smet'] =  cksmet.plotting.occur.fig_smet
         d['stellar-samples'] = cksmet.plotting.samples.samples
         d['prad-fe'] = cksmet.plotting.smet.prad_fe
         d['prad-fe-percentiles'] = cksmet.plotting.smet.prad_fe_percentiles
