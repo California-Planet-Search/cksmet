@@ -7,7 +7,7 @@ import corner
 from lmfit import Parameters
 import numpy as np
 
-fmt = {'kp':"{:.3f}",'beta':"{:.2f}",'alpha':"{:.2f}",'gamma':"{:.1f}",'per0':"{:.1f}"}
+fmt = {'kp':"{:.3f}",'logkp':"{:.2f}",'beta':"{:+.1f}",'alpha':"{:+.1f}",'gamma':"{:.1f}",'per0':"{:.1f}",'binwper':"{:.1f}"}
 
 class Fit(object):
     def __init__(self, x, nplnt, ntrial):
@@ -47,16 +47,22 @@ class Fit(object):
         
     def to_string(self,prefix=''):
         lines = []
-        chain = self.flatchain
-        q = chain.quantile([0.16,0.50,0.84])
-        for k in q.columns:
+        for k in self.pfit.keys():
             s = fmt[k]
-            val = s.format(q.ix[0.50,k])
-            err1 = s.format(q.ix[0.84,k] - q.ix[0.50,k])
-            err2 = s.format(q.ix[0.16,k] - q.ix[0.50,k])
-            s = "$%s^{+%s}_{%s}$" % (val, err1,err2)
+            if self.pfit[k].vary:
+                chain = self.flatchain[k]
+                q = chain.quantile([0.16,0.50,0.84])
+                val = s.format(q.ix[0.50])
+                err1 = s.format(q.ix[0.84] - q.ix[0.50])
+                err2 = s.format(q.ix[0.16] - q.ix[0.50])
+                s = "$%s^{+%s}_{%s}$" % (val, err1,err2)
+                s = s.replace('++','+')
+            else:
+                s = "$%s$" % s.format(self.pfit[k].value)
+
             line = r"{{{}{}}}{{{}}}".format(prefix,k,s)
             lines.append(line)
+
         return lines
         
     def sample_chain(self, nsamp):
@@ -104,7 +110,7 @@ class Exponential(Fit):
         super(Exponential, self).__init__(*args, **kwargs)
         self.model = smet_exp
         p = Parameters()
-        p.add('kp',value=0.001,vary=True,min=0,max=1)
+        p.add('logkp',value=-2,vary=True,min=-5,max=1)
         p.add('beta',value=0.28,vary=True,min=-10,max=10)
         self.p0 = p
 
@@ -113,7 +119,7 @@ class PerPowerLawExpSmetExp(Fit):
         super(PerPowerLawExpSmetExp, self).__init__(*args, **kwargs)
         self.model = per_powerlaw_smet_exp
         p = Parameters()
-        p.add('kp',value=0.001,vary=True,min=0,max=1)
+        p.add('logkp',value=-2,vary=True,min=-5,max=1)
         p.add('alpha',value=1.8,vary=False,min=-6,max=6)
         p.add('beta',value=0.28,vary=True,min=-6,max=6)
         p.add('binwper',vary=False,min=-6,max=6)
@@ -123,9 +129,9 @@ class PerPowerLawExpSmetExp(Fit):
 class PowerLawCutoff(Fit):
     def __init__(self, *args, **kwargs):
         super(PowerLawCutoff, self).__init__(*args, **kwargs)
-        self.model = cksmet.model.powerlaw_cutoff
+        self.model = powerlaw_cutoff
         p = Parameters()
-        p.add('kp',value=0.06,vary=True,min=0,max=1)
+        p.add('logkp',value=-2,vary=True,min=-5,max=1)
         p.add('beta',value=0.28,vary=True)
         p.add('per0',value=7,vary=True,min=0,max=100)
         p.add('gamma',value=2,vary=True)
@@ -138,7 +144,7 @@ def powerlaw_cutoff(params, x):
     p = params.valuesdict()
     per = x
     occur = (
-        p['kp']  * 
+        10**p['logkp']  * 
         per**p['beta'] * 
         (1 - np.exp( -1.0 * (per / p['per0'])**p['gamma']))
      ) 
@@ -150,7 +156,7 @@ def smet_exp(params, x):
     """
     smet = x
     p = params.valuesdict()
-    occur = 10**p['kp'] * 10**(p['beta'] * smet)
+    occur = 10**p['logkp'] * 10**(p['beta'] * smet)
     return occur
     
 def per_powerlaw_smet_exp(params, x):
@@ -162,7 +168,7 @@ def per_powerlaw_smet_exp(params, x):
     p = params.valuesdict()
     
     # occur is number of planets per star per log period interval
-    occur = p['kp'] * per**p['alpha'] * 10**(p['beta'] * smet)
+    occur = 10**p['logkp'] * per**p['alpha'] * 10**(p['beta'] * smet)
 
     # Convert into number of planets per bin (compared to data)
     occur *= p['binwper']
@@ -183,9 +189,9 @@ def per_powerlaw_smet_exp_integral(p, lims):
     int1 = lambda per: per** p['alpha'] / p['alpha']
     int2 = lambda smet : 10**(p['beta'] * smet) / p['beta'] / np.log(10)
     if p['alpha']==0:
-        f = p['kp']*(int2(smet2) - int2(smet1))
+        f = 10**p['logkp']*(int2(smet2) - int2(smet1))
     else:
-        f = p['kp']*(int1(per2) - int1(per1))*(int2(smet2) - int2(smet1))
+        f = 10**p['logkp']*(int1(per2) - int1(per1))*(int2(smet2) - int2(smet1))
 
     return f
 
