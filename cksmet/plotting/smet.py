@@ -10,14 +10,21 @@ import cksphys.io
 import cksmet.io
 import cksmet.cuts
 from cksmet.plotting.samples import add_anchored
+from cksmet.plotting import *
 
-sns.set_style('whitegrid')
-sns.set_color_codes()
+#sns.set_style('whitegrid')
+#sns.set_color_codes()
 
 texrp = '\mathregular{R}_\mathregular{P}' 
 texre = '\mathregular{R}_\mathregular{E}' 
 
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
+
+letter_bbox_props = dict(
+    boxstyle="round,pad=0.,rounding_size=0.2",fc='w',alpha=0.7,
+    ec='none'
+)
+letter_text_props = dict(size='large', weight='bold')
 
 def prad_fe_label():
     # median planet radius error
@@ -145,7 +152,15 @@ def prad_fe_fit():
     prad_fe_label()
     xlim(0.5,16)
 
+
 def cuts():
+    sns.set(
+        style='ticks',
+        rc={'ytick.major.size':3.0,'xtick.major.size':3.0,
+            'xtick.direction': u'out','ytick.direction': u'out'
+        }
+    )
+
     df =  cksmet.io.load_table('cks-cuts',cache=1)
 
     cuttypes = cksmet.cuts.plnt_cuttypes
@@ -165,7 +180,7 @@ def cuts():
 
     bpass = np.zeros(len(df))
     iplot = 0
-
+    
     for cuttype in cuttypes:
         ax = axL[iplot] 
         sca(ax)
@@ -186,27 +201,37 @@ def cuts():
         text(0.95,0.05, _text, **textkw)
 
         semilogx()
-        xlim(0.5,32)
+        xlim(0.3333,48) # Spaceing between plots
         xt = [0.5,1,2,4,8, 16, 32]
         xticks(xt,xt)
 
         letter = string.ascii_lowercase[iplot]
-        add_anchored(
-            letter,loc=2, frameon=False, 
-            prop=dict(size='large', weight='bold')
-        )
+        at = AnchoredText(letter,loc=2, frameon=True, prop=letter_text_props)
+        ax.add_artist(at)
+        setp(at.patch,**letter_bbox_props)
+        
         minorticks_off()
         iplot+=1
 
     axL = axL.reshape(nrows,ncols)
     setp(axL[-1,:],xlabel='$R_p\, (R_{\oplus})$')
     setp(axL[:,0],ylabel='[Fe/H]')
-    fig.set_tight_layout(True)
+    fig.set_tight_layout(False)
+
+    fig.subplots_adjust(hspace=0.001,wspace=0.001,left=0.07,right=0.99,top=0.95,bottom=0.10)
 
     axL = axL.flatten()
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
 def period_prad_slices(mode='tall'):
-    sns.set_style('whitegrid')
+    sns.set(
+        style='ticks',
+        rc={'ytick.major.size':3.0,'xtick.major.size':3.0,
+            'xtick.direction': u'out','ytick.direction': u'out'
+        }
+    )
+
+    #sns.set_style('whitegrid')
     sns.set_color_codes()
 
     yt = [0.5, 1, 2, 4, 8, 16, 32]
@@ -234,10 +259,10 @@ def period_prad_slices(mode='tall'):
     if mode=='four-equal-stars':
         smet_bins = [-10, -0.115, 0.013, 0.121, 10]
         labels = [
-            '[Fe/H] < $-0.11$',
-            '[Fe/H] = ($-$0.12,$-$0.01)',
-            '[Fe/H] = ($-$0.01,$+$0.12)',
-            '[Fe/H] > $+$0.12',
+            '[Fe/H] < ${:.3f}$'.format(smet_bins[1]),
+            '[Fe/H] = (${:+.3f}$,${:+.3f}$)'.format(*smet_bins[1:3]),
+            '[Fe/H] = (${:+.3f}$,${:+.3f}$)'.format(*smet_bins[2:4]),
+            '[Fe/H] > ${:+.3f}$'.format(smet_bins[3]),
         ]
         nrows = 2
         ncols = 2
@@ -262,7 +287,8 @@ def period_prad_slices(mode='tall'):
     while True:
         if i==nbins:
             break
-        sca(axL[i])
+        ax = axL[i]
+        sca(ax)
         loglog()
         smet1 = smet_bins[i]
         smet2 = smet_bins[i+1]
@@ -284,18 +310,31 @@ def period_prad_slices(mode='tall'):
         kw = dict(label='',color='b', **kwpts)
         plot(plnt_cut.koi_period,plnt_cut.iso_prad, **kw)
 
-        legend(frameon=True,markerscale=0,framealpha=0.5,fontsize='small',handletextpad=-2,loc='upper right')
+        #legend(frameon=True,markerscale=0,framealpha=0.5,fontsize='small',handletextpad=-2,loc='upper right')
+
+        bbox_props = dict(
+            boxstyle="round,pad=0.,rounding_size=0.2",fc='w',alpha=0.7,
+            ec='none'
+        )
+
+        at = AnchoredText(label,loc=1, frameon=True,prop=dict(size='small'))
+        ax.add_artist(at)
+        setp(at.patch,**bbox_props)
+
         yticks(yt,yt)
         xticks(xt,xt)
         i+=1
 
+    # Errorbar 
     for ax, letter in zip(axL.flatten(),string.ascii_lowercase):
         sca(ax)
-        add_anchored(
-            letter,loc=2, frameon=False, 
-            prop=dict(size='large', weight='bold')
-        )
+        at = AnchoredText(letter,loc=2, frameon=True, prop=letter_text_props)
+        ax.add_artist(at)
+        setp(at.patch,**letter_bbox_props)
+        grid()
 
+
+    # Errorbar 
     sca(axL[0])
     ebarx = sqrt(3) * 100.
     ebary = 0.7
@@ -303,8 +342,8 @@ def period_prad_slices(mode='tall'):
     yerr = [[ ebary - ebary/(1+yferr) ], [ebary*(1+yferr) - ebary]]
     xerr = [[0.00],[0.00]]
     errorbar([ebarx], [ebary], yerr=yerr, zorder=10, fmt='o',c='g',ms=4)
-
     xlim(0.3,1000)
     ylim(0.5,32)
     fig.set_tight_layout(True)
-    #fig.savefig('paper/fig_')
+    text(ebarx,ebary,'  Median\n  Uncert.',size='small',va='center')
+    minorticks_off()

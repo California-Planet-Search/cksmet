@@ -100,13 +100,19 @@ def val_fit():
         'fit_per-sup-sn',
 
         'fit_smet-hot-se',
-        'fit_smet-warm-se',
-
         'fit_smet-hot-sn',
-        'fit_smet-warm-sn',
-
-        'fit_smet-warm-ss',
+        'fit_smet-hot-ss',
         'fit_smet-hot-jup',
+
+        'fit_smet-warm-se',
+        'fit_smet-warm-sn',
+        'fit_smet-warm-ss',
+        'fit_smet-warm-jup',
+
+        'fit_persmet-hot-se',
+        'fit_persmet-hot-sn',
+        'fit_persmet-hot-ss',
+        'fit_persmet-hot-jup',
     ]
     lines = []
     for key in fits:
@@ -137,6 +143,15 @@ def val_samp():
     d['n-stars-field-pass'] = "{}".format( len(field))
 
     d['n-stars-field-pass-eff'] = cksmet.cuts.n_stars_field_pass_eff
+
+    # LAMOST Quantiles
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = lamo[~lamo.isany]
+    quantiles = [0.25, 0.5, 0.75]
+    lamoq = lamo.lamo_smet.quantile(quantiles)
+    for q, smet in lamoq.iteritems():
+        d['lamo-smet-{:.0f}'.format(q*100)] = "{:+.3f}".format(lamoq.ix[q])
+
     
     lines = []
     for k, v in d.iteritems():
