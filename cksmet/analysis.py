@@ -263,7 +263,7 @@ def load_fit(key):
     elif key.count('fit_persmet-')==1:
         _, dist, size = key.split('-')
         binwper = 0.25
-        occkey = 'occur-per={:f}-prad=physical-smet=0.2'.format(binwper)
+        occkey = 'occur-per={:.3f}-prad=physical-smet=0.05'.format(binwper)
         occ = cksmet.io.load_object(occkey)
         occ = set_index(occ,'size')
         cut = occ.df.ix[size]

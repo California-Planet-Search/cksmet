@@ -70,16 +70,13 @@ def calc_occur(args):
     print "calc occur"
     df = cksmet.io.load_object('occur-test',cache=2) # just to make sure things are working
 #    df = cksmet.io.load_object('occur-hot-jup',cache=2)
-#    df = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=2)
-#    df = cksmet.io.load_object('occur-nper=2-nsmet=10',cache=2)
-#    df = cksmet.io.load_object('occur-nper=2-nsmet=20',cache=2)
-#    df = cksmet.io.load_object('occur-nper=2-nsmet=40',cache=2)
-#    df = cksmet.io.load_object('occur-nper=2-nsmet=80',cache=2)
 #    df = cksmet.io.load_object('occur-nsmet=1',cache=2)
 #    df = cksmet.io.load_object('occur-nsmet=2',cache=2)
-    df = cksmet.io.load_object('occur-nsmet=5',cache=2)
-    df = cksmet.io.load_object('occur-nsmet=10',cache=2)
-    df = cksmet.io.load_object('occur-nsmet=20',cache=2)
+#    df = cksmet.io.load_object('occur-nsmet=5',cache=2)
+#    df = cksmet.io.load_object('occur-nsmet=10',cache=2)
+#    df = cksmet.io.load_object('occur-nsmet=20',cache=2)
+    df = cksmet.io.load_object('occur-per=0.250-prad=physical-smet=0.1',cache=2)
+    df = cksmet.io.load_object('occur-per=0.250-prad=physical-smet=0.05',cache=2)
 
 def fit_occur(args):
     fits = [
@@ -89,13 +86,19 @@ def fit_occur(args):
         'fit_per-sup-sn',
 
         'fit_smet-hot-se',
-        'fit_smet-warm-se',
-
         'fit_smet-hot-sn',
-        'fit_smet-warm-sn',
-
-        'fit_smet-warm-ss',
+        'fit_smet-hot-ss',
         'fit_smet-hot-jup',
+
+        'fit_smet-warm-se',
+        'fit_smet-warm-sn',
+        'fit_smet-warm-ss',
+        'fit_smet-warm-jup',
+
+        'fit_persmet-hot-se',
+        'fit_persmet-hot-sn',
+        'fit_persmet-hot-ss',
+        'fit_persmet-hot-jup',
     ]
 
     for fit in fits:
@@ -132,8 +135,6 @@ class Workflow(object):
         d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
         d['prob-detect-transit'] =  cksmet.plotting.comp.fig_prob_detect_transit
         d['per-small2'] = cksmet.plotting.occur.fig_per_small2
-        d['smet-large4'] = cksmet.plotting.occur.fig_smet_large4
-        d['smet-small4'] = cksmet.plotting.occur.fig_smet_small4
         self.plot_dict = d
 
         d = OrderedDict()
