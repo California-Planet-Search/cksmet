@@ -4,8 +4,34 @@ import pandas as pd
 import seaborn as sns
 import scipy.stats
 
+def _boxes():
+    boxes = [
+        dict(name="Hot Jupiters", per1=1.0, per2=10, prad1=8, prad2=24),
+        dict(name="Warm Jupiters", per1=10, per2=100, prad1=8, prad2=24),
+        dict(name="Cool Jupiters", per1=100, per2=350, prad1=8, prad2=24),
+
+        dict(name="Hot Sub-Saturns", per1=1, per2=10, prad1=4, prad2=8),
+        dict(name="Warm Sub-Saturns", per1=10, per2=100, prad1=4, prad2=8),
+        dict(name="Cool Sub-Saturns", per1=100, per2=350, prad1=4, prad2=8),
+
+        dict(name="Hot Sub-Neptunes", per1=1, per2=10, prad1=1.7, prad2=4),
+        dict(name="Warm Sub-Neptunes", per1=10, per2=100, prad1=1.7, prad2=4),
+        dict(name="Cool Sub-Neptunes", per1=100, per2=350, prad1=1.7, prad2=4),
+
+        dict(name="Hot Super-Earths", per1=1, per2=10, prad1=1.0, prad2=1.7),
+        dict(name="Warm Super-Earths", per1=10, per2=100, prad1=1.0, prad2=1.7),
+        dict(name="Cool Super-Earths", per1=100, per2=350, prad1=1.0, prad2=1.7),
+
+        dict(name="All Jupiters", per1=1, per2=350, prad1=8, prad2=24),
+        dict(name="All Sub-Saturns", per1=1, per2=350, prad1=4, prad2=8),
+        dict(name="All Sub-Neptunes", per1=1, per2=350, prad1=1.7, prad2=4),
+        dict(name="All Super-Earths", per1=1, per2=350, prad1=1.0, prad2=1.7),
+    ]
+    boxes = pd.DataFrame(boxes)
+    return boxes
 
 def plot_region():
+    boxes = _boxes()
     cks = cksmet.io.load_table('cks-cuts',cache=1)
     cks = cks[~cks.isany]
     loglog()
@@ -27,36 +53,13 @@ def kstest_region():
     Loop over the different regions and compute the KS test.
     """
 
-    boxes = [
-        dict(name="Hot Jupiters", per1=1.0, per2=10, prad1=8, prad2=24),
-        dict(name="Warm Jupiters", per1=10, per2=100, prad1=8, prad2=24),
-        dict(name="Cool Jupiters", per1=100, per2=350, prad1=8, prad2=24),
-
-        dict(name="Hot Sub-Saturns", per1=1, per2=10, prad1=4, prad2=8),
-        dict(name="Warm Sub-Saturns", per1=10, per2=100, prad1=4, prad2=8),
-        dict(name="Cool Sub-Saturns", per1=100, per2=350, prad1=4, prad2=8),
-
-        dict(name="Hot Sub-Neptunes", per1=1, per2=10, prad1=1.7, prad2=4),
-        dict(name="Warm Sub-Neptunes", per1=10, per2=100, prad1=1.7, prad2=4),
-        dict(name="Cool Sub-Neptunes", per1=100, per2=350, prad1=1.7, prad2=4),
-
-        dict(name="Hot Super-Earths", per1=1, per2=10, prad1=1.0, prad2=1.7),
-        dict(name="Warm Super-Earths", per1=10, per2=100, prad1=1.0, prad2=1.7),
-        dict(name="Cool Super-Earths", per1=100, per2=350, prad1=1.0, prad2=1.7),
-
-        dict(name="All Jupiters", per1=.1, per2=350, prad1=8, prad2=24),
-        dict(name="All Sub-Saturns", per1=.1, per2=350, prad1=4, prad2=8),
-        dict(name="All Sub-Neptunes", per1=.1, per2=350, prad1=1.7, prad2=4),
-        dict(name="All Super-Earths", per1=.1, per2=350, prad1=1.0, prad2=1.7),
-        dict(name="All Planets", per1=.1, per2=350, prad1=0.5, prad2=24),
-    ]
-    boxes = pd.DataFrame(boxes)
     cks = cksmet.io.load_table('cks-cuts',cache=1)
     cks = cks[~cks.isany]
     lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=2)
     lamo = lamo[~lamo.isany]
     #lamo = lamo.query('-1 < lamo_smet < 0.5')
 
+    boxes = _boxes()
     boxes = boxes.copy()
     #boxes = boxes.sort_values(by=['per1','prad1'])
     boxes2 = []
@@ -72,21 +75,7 @@ def kstest_region():
         d = calculate_statistics(cut.cks_smet,lamo.lamo_smet)
         d = dict(d, **row)
         lines.append( to_string(d))
-
-        boxes2+=[d]
-
-    boxes2 = pd.DataFrame(boxes2)
-    #
-    d = calculate_statistics(lamo.lamo_smet, lamo.lamo_smet)
-    d['name'] = "LAMOST"
-    s = "{name:s} & "
-    s+="\\nodata & "
-    s+="\\nodata & "
-    s+="{n:.0f} & {mean:+.3f} & "
-    s+="{sem:.3f} & "
-    s+="\\nodata & \\nodata & \\nodata \\\\"
-    s=s.format(**d)
-    lines.append(s)
+    
     return lines
 
 def calculate_statistics(smet_plnt, smet_star):

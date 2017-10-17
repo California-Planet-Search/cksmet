@@ -153,6 +153,27 @@ def val_samp():
         d['lamo-smet-{:.0f}'.format(q*100)] = "{:+.3f}".format(lamoq.ix[q])
 
     
+    boxes = cksmet.kstest._boxes()
+    boxes = pd.DataFrame(boxes)
+    cks = cksmet.io.load_table('cks-cuts',cache=1)
+    cks = cks[~cks.isany]
+
+    boxes = boxes.copy()
+    boxes2 = []
+    
+
+    lines = []
+    for i,row in boxes.iterrows():
+        cut = cks[
+            cks.koi_period.between(row.per1,row.per2) &
+            cks.iso_prad.between(row.prad1,row.prad2)
+        ]
+        _d = cksmet.kstest.calculate_statistics(cut.cks_smet,lamo.lamo_smet)
+        _d = dict(_d, **row)
+        d['{name} mean'.format(**_d)] = "{:+.3f}".format(_d['mean'])
+        d['{name} pval'.format(**_d)] = "\\num{{{ttest_pval_max:.0e}}}".format(**_d)
+        d['{name} n'.format(**_d)] = "{n:.0f}".format(**_d)
+    
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)
@@ -161,3 +182,4 @@ def val_samp():
     return lines
 
 
+import cksmet.kstest
