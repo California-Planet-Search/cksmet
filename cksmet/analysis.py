@@ -158,6 +158,10 @@ def load_occur(key):
 
         if smet=='all':
             smet_bins=[-1,0.5]
+        elif smet=='sub':
+            smet_bins=[-1,0]
+        elif smet=='sup':
+            smet_bins=[0,0.5]
         else:
             smet = float(smet.replace('smet=',''))
             smet_bins = np.arange(-0.4,0.4+eps,smet)
@@ -262,12 +266,8 @@ def load_fit(key):
     elif key.count('fit_per-')==1:
         binwper = 0.05 # Size of the bins used in the fitting
         _, smet, size = key.split('-')
-        if smet=='all':
-            occ = cksmet.io.load_object('occur-per=0.05-prad=physical-smet=all',cache=1)
-            cut = occ.df.ix[size,:]
-        else:
-            occ = cksmet.io.load_object('occur-nsmet=2',cache=1)
-            cut = occ.df.ix[size,smet]
+        occ = cksmet.io.load_object('occur-per={}-prad=physical-smet={}'.format(binwper, smet),cache=1)
+        cut = occ.df.ix[size,:]
 
         if (key.count('se')==1):
             cut = cut[cut.perc.between(1,100) & (cut.prob_det_mean > 0.25)]

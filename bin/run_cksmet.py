@@ -85,6 +85,12 @@ def fit_occur(args):
         'fit_per-sub-sn',
         'fit_per-sup-sn',
 
+
+        'fit_per-all-se',
+        'fit_per-all-sn',
+        'fit_per-all-ss',
+        'fit_per-all-jup',
+
         'fit_smet-hot-se',
         'fit_smet-hot-sn',
         'fit_smet-hot-ss',
@@ -99,6 +105,7 @@ def fit_occur(args):
         'fit_persmet-hot-sn',
         'fit_persmet-hot-ss',
         'fit_persmet-hot-jup',
+
     ]
 
     for fit in fits:
@@ -134,9 +141,7 @@ class Workflow(object):
         d['per-prad-slices-equal-stars'] = lambda : cksmet.plotting.smet.period_prad_slices(mode='four-equal-stars')
         d['smet-snr'] = cksmet.plotting.samples.smet_snr
         d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
-        d['contour-linear'] =  cksmet.plotting.occur.fig_contour_linear
         d['contour-all'] =  cksmet.plotting.occur.fig_contour_all
-        d['contour-log'] =  cksmet.plotting.occur.fig_contour_log
         d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
         d['prob-detect-transit'] =  cksmet.plotting.comp.fig_prob_detect_transit
         d['per-small2'] = cksmet.plotting.occur.fig_per_small2
