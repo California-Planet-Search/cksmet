@@ -130,6 +130,8 @@ def smet_stats():
 
 def val_fit():
     fits = [
+        'fit_per-all-se',
+        'fit_per-all-sn',
         'fit_per-sub-se',
         'fit_per-sup-se',
         'fit_per-sub-sn',

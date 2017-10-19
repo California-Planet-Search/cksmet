@@ -238,7 +238,6 @@ $\Delta \log R_P$ = {:.2f} dex
         )
         text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
 
-
     if label:
         if scale=='linear':
             kw = dict(
@@ -381,22 +380,15 @@ def annotate_checkerboard(df,print_ul=False):
             ]
         )
 
-def per(occur,**kw):
-    yerr = np.array(occur['rate_err2 rate_err1'.split()]).T
-    yerr[0] *= -1 
-    semilogy()
-    errorbar(occur.perc,occur.rate,yerr=yerr,fmt='o',**kw)
-    if kw.has_key('label'):
-        kw['label'] = ''
-    plot(occur.perc,occur.rate_ul,marker='v',lw=0,**kw)
 
 def fig_per_small2():
+    sns.set_context('paper')
     fig,axL = subplots(ncols=2,figsize=(8.5,4),sharex=True,sharey=True)
     sca(axL[0])
     per_sample('fit_per-sub-se','se',color='b',label='[Fe/H] < 0')
     per_sample('fit_per-sup-se','se',color='g',label='[Fe/H] > 0')
     title('Super-Earths')
-    legend(frameon=True)
+
     fig_label("a")
 
     ylabel('Planets Per 100 Stars')
@@ -416,40 +408,70 @@ def fig_per_small2():
     setp(axL, xlabel='Period (days)', ylim=(3e-4,1), xlim = (1,300))
     fig.set_tight_layout(True)
 
-
 def fig_per():
-    fig,axL = subplots(ncols=2,figsize=(8.5,4),sharex=True,sharey=True)
-    sca(axL[0])
-    per_sample('fit_per-sub-se',color='b',label='[Fe/H] < 0')
-    per_sample('fit_per-sup-se',color='g',label='[Fe/H] > 0')
-    title('Super-Earths')
-    legend(frameon=True)
-    fig_label("a")
+    sns.set_context('paper',font_scale=1.3)
+    fig,axL = subplots(ncols=1,sharex=True,sharey=True,figsize=(6,6))
+    loglog()
+    xk = 'perc'
+    # Super Earths
+    occ = cksmet.io.load_object('occur-per=0.25-prad=physical-smet=all',cache=1)
+    cut = occ.df.query('1 <  perc < 100')
+    size='se'
+    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-se',size)
+    sampler.plot_all()
+    fac = 1
+    plot_rates(xk,cut.ix[size],size,fac=fac)
 
-    ylabel('Planets Per 100 Stars')
+    # Sub Neptunes
+    occ = cksmet.io.load_object('occur-per=0.25-prad=physical-smet=all',cache=1)
+    cut = occ.df.query('1 <  perc < 350')
+    size='sn'
+    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-sn',size)
+    sampler.plot_all()
+    plot_rates(xk, cut.ix[size], size, fac=fac)
+
+    # Sub Satruns 
+    size='ss'
+    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-ss',size)
+    plot_rates(xk, cut.ix[size], size, fac=fac)
+
+    # Sub Satruns 
+    size='ss'
+    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-ss',size)
+    plot_rates(xk, cut.ix[size], size, fac=fac)
+
+    # Sub Satruns 
+    size='jup'
+    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-jup',size)
+    plot_rates(xk, cut.ix[size], size, fac=fac)
+
+    ylabel('Planets per 100 Stars per 0.25 dex $P$ Interval')
     yticks_planets_per_100_stars()
 
-    sca(axL[1])
-    per_sample('fit_per-sub-sn',color='b',label='[Fe/H] < 0')
-    per_sample('fit_per-sup-sn',color='g',label='[Fe/H] > 0')
-    title('Sub-Neptunes')
-    legend(frameon=True)
-    fig_label("b")
-    yticks_planets_per_100_stars()
 
     xt = [1,3,10,30,100,300]
     xticks(xt,xt)
     yticks_planets_per_100_stars()
-    setp(axL, xlabel='Period (days)', ylim=(3e-4,1), xlim = (1,300))
+    setp(axL, xlabel='Period (days)', ylim=(1e-4,0.3), xlim = (1,300))
+
+    i = 0
+    for size in 'se sn ss jup'.split():
+        s =  "\n"*i + namedict[size] 
+        kw=dict(color=ptcolor[size],va='top',ha='left',transform=axL.transAxes)
+        text(0.05, 0.95, s, **kw)
+        i+=1
+
     fig.set_tight_layout(True)
 
-def plot_rates(xk, occur, fmtkey, **kw):
+def plot_rates(xk, occur, fmtkey,fac=1.0, **kw):
     """
     Args
         xk (str): x value
         occur (pd.DataFrame): must contain rate, rate_err1, rate_err2
     """
     if xk=='smetc':
+        _ptcolor = ptcolor[fmtkey]
+    if xk=='perc':
         _ptcolor = ptcolor[fmtkey]
         
     ebkw1 = dict(fmt='o',ms=6,mew=2,mfc='w',capsize=6,capthick=2,zorder=4,color=_ptcolor,**kw)
@@ -474,12 +496,12 @@ def plot_rates(xk, occur, fmtkey, **kw):
 
     x = occur[xk]
     y = occur.rate
-    errorbar(x,y,yerr=yerr, **ebkw1)
-    errorbar(x,y,yerr=yerr, **ebkw2)
+    errorbar(x,y*fac,yerr=yerr*fac, **ebkw1)
+    errorbar(x,y*fac,yerr=yerr*fac, **ebkw2)
 
     occurul = occur.dropna(subset=['rate_ul'])
     if len(occurul) >0:
-        plot(x,occur.rate_ul,**ulkw)
+        plot(x,occur.rate_ul*fac,**ulkw)
 
 class Sampler(object):
     def __init__(self, key, fmtkey):
@@ -519,6 +541,7 @@ class Sampler(object):
         self.fit_best = self.fit.model(params,self.x)
 
 import lmfit 
+
 class SamplerSmet(Sampler):
     x = np.linspace(-0.4,0.4,10) 
     
@@ -554,25 +577,53 @@ class SamplerPerSmet(Sampler):
         fit_sample = np.array(fit_sample)
         return fit_sample
 
+class SamplerPer(Sampler):
+    x = np.logspace(log10(1),log10(350), 1000)
+    binwper = 0.25
+    def model(self,params):
+        return self.fit.model(params, self.x) / self.fit.pfit['binwper'].value * self.binwper
 
-def per_sample(key, fmtkey, **kw):
+    def compute_samples(self):
+        psamples = self.fit.sample_chain(1000)
+        fit_samples = []
+        for i, params in psamples.iterrows():
+            params = self.dict_to_params(params)
+            fit_samples.append(self.model(params))
+        self.fit_samples = np.vstack(fit_samples) 
+
+    def compute_best(self):
+        params = self.fit.pfit
+        self.fit_best = self.model(params)
+
+
+def per(occur,fac=1,**kw):
+    yerr = np.array(occur['rate_err2 rate_err1'.split()]).T
+    yerr[0] *= -1 
+    semilogy()
+    errorbar(occur.perc, occur.rate *fac ,yerr=yerr*fac,fmt='o',**kw)
+    if kw.has_key('label'):
+        kw['label'] = ''
+    plot(occur.perc,occur.rate_ul*fac,marker='v',lw=0,**kw)
+
+def per_sample(key, fmtkey, plot_rates=True,plot_fit=True,plot_band=True,**kw):
     semilogx()
     fit = cksmet.io.load_object(key)
-    per(fit.occur,**kw)
-    peri = np.logspace(log10(1),log10(350), 100)
-    fit_samples = fit.sample(peri,1000)
-    fit_best = fit.model(fit.pfit,peri)
-    p16, p50, p84 = np.percentile(fit_samples,[16,50,84],axis=0)
-    #_bdcolor = bdcolor[fmtkey]
-    #fill_between(peri, p16, p84, color=_bdcolor,zorder=1)
-    fill_between(peri, p16, p84, color='pink',zorder=1)
-    plot(peri,fit_best,color='r',alpha=1)
+    if plot_rates:
+        per(fit.occur,**kw)
 
+    if plot_fit:
+        peri = np.logspace(log10(1),log10(350), 1000)
+        fit_samples = fit.sample(peri,1000)
+        fit_best = fit.model(fit.pfit,peri)
+        p16, p50, p84 = np.percentile(fit_samples,[16,50,84],axis=0)
+
+    if plot_band:
+        fill_between(peri, p16, p84, color='pink',zorder=1)
+        plot(peri,fit_best,color='r',alpha=1)
 
 def persmet_sample(key, fmtkey, **kw):
     fit = cksmet.io.load_object(key)
     #smet(fit.occur,**kw)
-
 
 def sum_cells_per(df0):
     df2 = []
@@ -666,7 +717,7 @@ def fig_smet_hot():
 
 
 def yticks_planets_per_100_stars():
-    yt = np.array([1e-4,3,3e-4,1e-3,3e-3,1e-2,3e-2,1e-1,3e-1,1])
+    yt = np.array([1e-5,3e-5,1e-4,3,3e-4,1e-3,3e-3,1e-2,3e-2,1e-1,3e-1,1])
     syt = map(lambda x: x if x < 1 else "%.0f" % x , yt*100)
     yticks(yt,syt)
 

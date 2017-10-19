@@ -147,15 +147,26 @@ def load_occur(key):
 
     if key.count('occur-per=')==1:
         _, per, prad, smet = key.split('-')
-
-        per = float(per.replace('per=',''))
-        smet = float(smet.replace('smet=',''))
         eps = 1e-3
+        
+        # Parse per
+        per = per.replace('per=','')
+        per = float(per)
+        
+        # Parse smet
+        smet = smet.replace('smet=','')
 
-        per_bins = np.exp(np.arange(0,np.log(350)+eps,per))
+        if smet=='all':
+            smet_bins=[-1,0.5]
+        else:
+            smet = float(smet.replace('smet=',''))
+            smet_bins = np.arange(-0.4,0.4+eps,smet)
+
+        per_bins = 10**(np.arange(np.log10(1),np.log10(350)+eps,per))
+        print per_bins
         prad_bins = prad_bins_dict['physical']
-        smet_bins = np.arange(-0.4,0.4+eps,smet)
         occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+        occ = set_index(occ,'size')
 
     if key=='occur-test':
         per_bins = [1,10,100]
@@ -228,7 +239,7 @@ def load_occur(key):
         prad_bins = prad_bins_dict['two-per-octave']
         smet_bins = [-1, 0.5]
         occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
-    
+
     elif key=='occur-hot-jup':
         per_bins = [1,10]
         prad_bins = [8,24]
@@ -249,12 +260,26 @@ def load_fit(key):
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
 
     elif key.count('fit_per-')==1:
+        binwper = 0.05 # Size of the bins used in the fitting
         _, smet, size = key.split('-')
-        occ = cksmet.io.load_object('occur-nsmet=2',cache=1)
-        cut = occ.df.ix[size,smet]
-        cut = cut[cut.perc.between(1,350) & (cut.prob_det_mean > 0.25)]
-        fit = cksmet.fit.PowerLawCutoff(cut.perc, cut.nplnt, cut.ntrial)
+        if smet=='all':
+            occ = cksmet.io.load_object('occur-per=0.05-prad=physical-smet=all',cache=1)
+            cut = occ.df.ix[size,:]
+        else:
+            occ = cksmet.io.load_object('occur-nsmet=2',cache=1)
+            cut = occ.df.ix[size,smet]
 
+        if (key.count('se')==1):
+            cut = cut[cut.perc.between(1,100) & (cut.prob_det_mean > 0.25)]
+        if (key.count('sn')==1):
+            cut = cut[cut.perc.between(1,350) & (cut.prob_det_mean > 0.25)]
+        if (key.count('ss')==1):
+            cut = cut[cut.perc.between(1,350) & (cut.prob_det_mean > 0.25)]
+        if (key.count('jup')==1):
+            cut = cut[cut.perc.between(1,350) & (cut.prob_det_mean > 0.25)]
+
+        fit = cksmet.fit.PowerLawCutoff(cut.perc, cut.nplnt, cut.ntrial) 
+        fit.p0['binwper'].value = binwper
         fit.fit()
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
 

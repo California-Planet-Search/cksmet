@@ -127,6 +127,7 @@ class Workflow(object):
         d['lamo-on-cks'] = cksmet.plotting.calibrate.validation_lamo
         d['prad-smet-cuts'] = cksmet.plotting.smet.cuts
         d['occur-smet'] =  cksmet.plotting.occur.fig_smet
+        d['occur-per'] =  cksmet.plotting.occur.fig_per
         d['stellar-samples'] = cksmet.plotting.samples.samples
         d['prad-fe'] = cksmet.plotting.smet.prad_fe
         d['prad-fe-percentiles'] = cksmet.plotting.smet.prad_fe_percentiles

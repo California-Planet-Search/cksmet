@@ -7,7 +7,7 @@ import corner
 from lmfit import Parameters
 import numpy as np
 
-fmt = {'kp':"{:.3f}",'logkp':"{:.2f}",'beta':"{:+.1f}",'alpha':"{:+.1f}",'gamma':"{:.1f}",'per0':"{:.1f}",'binwper':"{:.1f}"}
+fmt = {'kp':"{:.3f}",'logkp':"{:.2f}",'beta':"{:+.1f}",'alpha':"{:+.1f}",'gamma':"{:.1f}",'gamma+beta':"{:.1f}",'per0':"{:.1f}",'binwper':"{:.1f}"}
 
 class Fit(object):
     def __init__(self, x, nplnt, ntrial):
@@ -135,7 +135,23 @@ class PowerLawCutoff(Fit):
         p.add('beta',value=0.28,vary=True)
         p.add('per0',value=7,vary=True,min=0,max=100)
         p.add('gamma',value=2,vary=True)
+        p.add('binwper',vary=False,min=-6,max=6)
         self.p0 = p
+
+    def to_string(self,prefix=''):
+        lines = super(PowerLawCutoff,self).to_string(prefix=prefix)
+        k =  'gamma+beta'
+        chain = self.flatchain['gamma'] + self.flatchain['beta'] 
+        s = fmt[k]
+        q = chain.quantile([0.16,0.50,0.84])
+        val = s.format(q.ix[0.50])
+        err1 = s.format(q.ix[0.84] - q.ix[0.50])
+        err2 = s.format(q.ix[0.16] - q.ix[0.50])
+        s = "$%s^{+%s}_{%s}$" % (val, err1,err2)
+        s = s.replace('++','+')
+        line = r"{{{}{}}}{{{}}}".format(prefix,k,s)
+        lines.append(line)
+        return lines
 
 def powerlaw_cutoff(params, x):
     """
