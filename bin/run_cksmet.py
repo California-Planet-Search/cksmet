@@ -133,6 +133,10 @@ class Workflow(object):
         d['per-prad-slices-equal-stars'] = lambda : cksmet.plotting.smet.period_prad_slices(mode='four-equal-stars')
         d['smet-snr'] = cksmet.plotting.samples.smet_snr
         d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
+        d['contour-linear'] =  cksmet.plotting.occur.fig_contour_linear
+        d['contour-all'] =  cksmet.plotting.occur.fig_contour_all
+        d['contour-log'] =  cksmet.plotting.occur.fig_contour_log
+        d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
         d['prob-detect-transit'] =  cksmet.plotting.comp.fig_prob_detect_transit
         d['per-small2'] = cksmet.plotting.occur.fig_per_small2
         self.plot_dict = d
@@ -143,6 +147,8 @@ class Workflow(object):
         d['cuts-field'] = cksmet.tables.cuts_field
         d['smet-stats'] = cksmet.tables.smet_stats
         d['kstest'] = cksmet.kstest.kstest_region
+        d['occurrence'] = cksmet.tables.occurrence
+        d['occurrence-stub'] = lambda : cksmet.tables.occurrence(stub=True)
         self.table_dict = d
 
         d = OrderedDict()

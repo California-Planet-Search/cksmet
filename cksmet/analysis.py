@@ -22,11 +22,11 @@ per_bins_dict = {
     'four-per-decade': 10**np.arange(-0.5,3.001,0.25)    
 }    
 
-
+# Neceassary to overshoot edge oc completeness zone so that spline interpolation works so eventhough we only go up to 32 Re, we compute completeness out to 64
 prad_bins_dict = {
-    'xfine': np.round(np.logspace(np.log10(0.5),np.log10(32),49 ),2),
-    'fine': np.round(np.logspace(np.log10(0.5),np.log10(32),25 ),2),
-    'two-per-octave': 2**np.arange(-1,5.001,0.5),
+    'xfine': np.round(np.logspace(np.log10(0.25),np.log10(64),49 ),2),
+    'fine': np.round(np.logspace(np.log10(0.25),np.log10(64),25 ),2),
+    'two-per-octave': 2**np.arange(-2,6.001,0.5),
     'physical': [1.0,1.7,4.0,8.0,24.0],
     'coarse': [ 
          0.5,  0.71, 1.00, 1.41, 2.0, 2.83, 4.00, 5.66, 8.0, 11.31, 16.0
@@ -69,7 +69,7 @@ def load_completeness():
     comp.create_splines()
     return comp
 
-def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
+def compute_binned_occurrence(per_bins, prad_bins, smet_bins, verbose=1):
     nstars = cksmet.cuts.n_stars_field_pass_eff 
 
     print "Initializing occurrence object"
@@ -113,7 +113,7 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins):
         _out = dict(row, **_out)
         out.append(_out)
         i_count+=1
-        if i_count%10==0:
+        if (i_count%10==0) and (verbose==1):
             _print_row(out)
 
     out = pd.DataFrame(out)
@@ -144,7 +144,6 @@ def set_index(occ, mode):
     
 def load_occur(key):
     print "Loading occurrence object {}".format(key)
-
 
     if key.count('occur-per=')==1:
         _, per, prad, smet = key.split('-')
@@ -181,7 +180,6 @@ def load_occur(key):
         prad_bins = prad_bins_dict['physical']
         smet_bins = np.arange(-0.6, 0.4001,0.05)
         occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
-
 
     elif key=='occur-nsmet=2':
         per_bins = per_bins_dict['four-per-decade']

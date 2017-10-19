@@ -56,6 +56,41 @@ def cut_statistics(df, sample, cuttypes):
         npassallprev = npassall
 
     return lines
+import numpy as np
+import cksmet.io
+
+def occurrence(stub=False):
+    occ = cksmet.io.load_object('occur-nsmet=1')
+
+    df = occ.df
+    df = df.query('1 < perc < 300 and 0.5 < pradc < 32') 
+    if stub:
+        df = df.query('1 < pradc < 1.4') 
+
+    df = df.sort_values(by=['pradc','perc'],ascending=[False,True])
+
+    lines = []
+    for i,row in df.iterrows():
+        for k in 'rate_ul rate rate_err1 rate_err2'.split():
+            row['p'+k] = row[k]*100
+
+        if np.isnan(row.rate_err1):
+            row['prate_tex'] = "< %(prate_ul).2f" % row
+        else:
+            row['prate_tex'] = "%(prate).2f^{+%(prate_err1).2f}_{%(prate_err2).2f}" % row
+        if row.prob_det_mean < 0.25:
+            row['prate_tex'] = r"\nodata"
+
+        s=r""
+        s+="{prad1:.2f} & {prad2:.2f} & "
+        s+="{per1:.2f} & {per2:.2f} & "
+        s+="{nplnt} & {prob_det_mean:.2f} & {ntrial:.1f} & "
+        s+=r"${prate_tex}$ \\"
+        s = s.format(**row)
+        print s
+        lines.append(s)
+
+    return lines
 
 def smet_stats():
     """
@@ -92,6 +127,7 @@ def smet_stats():
         lines.append(r"{:.0f}\% & {:.3f} & {:.3f} & {:.3f} \\".format(q*100, cksq.ix[q], fieldq.ix[q], lamoq.ix[q]))
     
     return lines
+
 def val_fit():
     fits = [
         'fit_per-sub-se',
@@ -174,6 +210,15 @@ def val_samp():
         d['{name} pval'.format(**_d)] = "\\num{{{ttest_pval_max:.0e}}}".format(**_d)
         d['{name} n'.format(**_d)] = "{n:.0f}".format(**_d)
     
+
+    occ = cksmet.io.load_object('occur-nsmet=1',cache=1)
+    cut = occ.df.query('1 < perc < 10 and 8 < pradc < 24')
+    print cut['rate'].sum()
+    stats = cksmet.stats.sum_cells(cut.ntrial,cut.nplnt)
+    d['rate-hot-jup'] = r"{%.2f}^{+%.2f}_{%.2f}" % (1e2*stats['rate'], 1e2*stats['rate_err1'], 1e2*stats['rate_err2'])
+    d['rate-hot-jup-simple'] = r"{%.2f}" % (1e2*cut.rate.sum())
+
+
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)
