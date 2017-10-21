@@ -159,7 +159,7 @@ def val_fit():
         lines += fit.to_string(prefix=prefix+'-')
     return lines
 
-def val_samp():
+def val_samp(return_dict=False):
     d = OrderedDict()
     cache = 2
     cand = cksmet.io.load_table('cks-cuts',cache=cache)
@@ -198,8 +198,6 @@ def val_samp():
 
     boxes = boxes.copy()
     boxes2 = []
-    
-
     lines = []
     for i,row in boxes.iterrows():
         cut = cks[
@@ -208,10 +206,10 @@ def val_samp():
         ]
         _d = cksmet.kstest.calculate_statistics(cut.cks_smet,lamo.lamo_smet)
         _d = dict(_d, **row)
-        d['{name} mean'.format(**_d)] = "{:+.3f}".format(_d['mean'])
+        d['{name} mean'.format(**_d)] = "{:+.2f}".format(_d['mean'])
         d['{name} pval'.format(**_d)] = "\\num{{{ttest_pval_max:.0e}}}".format(**_d)
+        d['{name} sem'.format(**_d)] =  "{:.2f}".format(_d['sem'])
         d['{name} n'.format(**_d)] = "{n:.0f}".format(**_d)
-    
 
     occ = cksmet.io.load_object('occur-nsmet=1',cache=1)
     cut = occ.df.query('1 < perc < 10 and 8 < pradc < 24')
@@ -220,6 +218,8 @@ def val_samp():
     d['rate-hot-jup'] = r"{%.2f}^{+%.2f}_{%.2f}" % (1e2*stats['rate'], 1e2*stats['rate_err1'], 1e2*stats['rate_err2'])
     d['rate-hot-jup-simple'] = r"{%.2f}" % (1e2*cut.rate.sum())
 
+    if return_dict:
+        return d
 
     lines = []
     for k, v in d.iteritems():

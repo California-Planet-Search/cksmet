@@ -133,18 +133,18 @@ class Workflow(object):
         d = OrderedDict()
         d['lamo-on-cks'] = cksmet.plotting.calibrate.validation_lamo
         d['prad-smet-cuts'] = cksmet.plotting.smet.cuts
-        d['occur-smet'] =  cksmet.plotting.occur.fig_smet
-        d['occur-per'] =  cksmet.plotting.occur.fig_per
         d['stellar-samples'] = cksmet.plotting.samples.samples
         d['prad-fe'] = cksmet.plotting.smet.prad_fe
         d['prad-fe-percentiles'] = cksmet.plotting.smet.prad_fe_percentiles
         d['per-prad-slices-equal-stars'] = lambda : cksmet.plotting.smet.period_prad_slices(mode='four-equal-stars')
-        d['smet-snr'] = cksmet.plotting.samples.smet_snr
         d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
+        d['occur-per'] =  cksmet.plotting.occur.fig_per
         d['contour-all'] =  cksmet.plotting.occur.fig_contour_all
-        d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
         d['prob-detect-transit'] =  cksmet.plotting.comp.fig_prob_detect_transit
-        d['per-small2'] = cksmet.plotting.occur.fig_per_small2
+        d['occur-smet'] =  cksmet.plotting.occur.fig_smet
+        d['occur-per-smet'] = cksmet.plotting.occur.fig_per_smet
+        d['summary'] = cksmet.plotting.occur.fig_summary
+        d['smet-snr'] = cksmet.plotting.samples.smet_snr
         self.plot_dict = d
 
         d = OrderedDict()

@@ -372,8 +372,9 @@ def annotate_checkerboard(df,print_ul=False):
             ]
         )
 
-def fig_per_small2():
-    sns.set_context('paper',font_scale=1.1)
+def fig_per_smet():
+    sns.set_context('paper',font_scale=1.0)
+    sns.set_style('ticks')
     fig,axL = subplots(ncols=2,figsize=(7.0,3.5))
     sca(axL[0])
 
@@ -418,10 +419,61 @@ def fig_per_small2():
             text(0.75, 0.12, s, **kw)
             i+=1
 
-
     setp(axL, xlabel='Period (days)', ylim=(3e-4,3e-1), xlim = (1,300))
     setp(axL, ylabel='Planets per 100 Stars per 0.25 dex $P$ Interval')
 
+    fig.set_tight_layout(True)
+
+import cksmet.tables
+def fig_summary():
+    sns.set_context('paper',font_scale=1.0)
+    sns.set_style('ticks')
+    fig,ax = subplots(figsize=(5,4))
+    perbins = [1, 10, 100]
+    pers = ['hot','warm']
+    sizes = ['se','sn','ss','jup']
+    pradbins = [1.0, 1.7, 4.0, 8.0, 24.0]
+    loglog()
+    d = cksmet.tables.val_samp(return_dict=True)
+    for i in range(len(perbins)-1):
+        for j in range(len(pradbins)-1):
+            per = pers[i]
+            size = sizes[j]
+            xy = perbins[i], pradbins[j]
+            h = pradbins[j+1] - pradbins[j]
+            w = perbins[i+1] - perbins[i]
+            xytext = xy[0],xy[1]+h
+            
+            print xy
+            fitkey = 'fit_smet-{}-{}'.format(per,size)
+            fit = cksmet.io.load_object(fitkey,cache=1)
+
+            rect = Rectangle(xy, w, h, lw=1,ec='r',fc='none',zorder=4)
+            ptype = "%s %s" % (per.capitalize(),namedict[size])
+            s = ""
+            s+= "%s \n" % ptype
+            if fitkey=='fit_smet-warm-jup':
+                 s+=r"$\beta$ = Unconstrained" 
+            else:
+                 s+=r"$\beta = %s$" % fit.to_string()[1].replace(r'{beta}','').replace(r"{$","").replace("$}","")
+            
+            s+='\n'
+            s+=r"$\left<\mathrm{[Fe/H]}\right>$ = $%s \pm %s$" % (d[ptype+" mean"],d[ptype+" sem"])
+
+
+            ax.annotate(s, xy=xytext, xytext=(3, -2.5),textcoords='offset points',size='x-small',va='top')
+
+            #text(xy[0],xy[1],s,zorder=10)
+            ax.add_patch(rect)
+
+    yt = [0.5, 1, 2, 4, 8, 16, 32]
+    xt = [0.3,1, 3, 10, 30, 100, 300]
+    xticks(xt,xt)
+    yticks(yt,yt)
+    xlabel('Orbital Period (days)')
+    ylabel('Planet size (Earth-radii)')
+    setp(ax,xlim=(0.5,300),ylim=(0.5,32))
+    minorticks_off()
     fig.set_tight_layout(True)
 
 def fig_per():
