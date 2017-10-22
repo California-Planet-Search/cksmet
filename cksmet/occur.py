@@ -9,7 +9,6 @@ class Occurrence(object):
         self.plnt = plnt
         if smet_field is not None:
             self.smet_field = smet_field
-            self.smet_ecdf = ECDF(smet_field)
 
     def occurence_box(self, limits):
         """Compute occurrence in a little box

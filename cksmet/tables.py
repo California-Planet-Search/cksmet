@@ -60,8 +60,8 @@ import numpy as np
 import cksmet.io
 
 def occurrence(stub=False):
-    occ = cksmet.io.load_object('occur-nsmet=1')
-
+    key = 'occur-per=0.25-prad=twoperoctave'
+    occ = cksmet.io.load_object(key,cache=1)
     df = occ.df
     df = df.query('1 < perc < 300 and 0.5 < pradc < 32') 
     if stub:
@@ -211,7 +211,9 @@ def val_samp(return_dict=False):
         d['{name} sem'.format(**_d)] =  "{:.2f}".format(_d['sem'])
         d['{name} n'.format(**_d)] = "{n:.0f}".format(**_d)
 
-    occ = cksmet.io.load_object('occur-nsmet=1',cache=1)
+    key = 'occur-per=0.25-prad=twoperoctave'
+    occ = cksmet.io.load_object(key,cache=1)
+
     cut = occ.df.query('1 < perc < 10 and 8 < pradc < 24')
     print cut['rate'].sum()
     stats = cksmet.stats.sum_cells(cut.ntrial,cut.nplnt)

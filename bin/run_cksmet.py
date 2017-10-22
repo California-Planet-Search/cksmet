@@ -67,44 +67,58 @@ def calc_comp(args):
     cksmet.io.load_object('comp',cache=2)
 
 def calc_occur(args):
-    print "calc occur"
-    df = cksmet.io.load_object('occur-test',cache=2) # just to make sure things are working
-#    df = cksmet.io.load_object('occur-hot-jup',cache=2)
-#    df = cksmet.io.load_object('occur-nsmet=1',cache=2)
-#    df = cksmet.io.load_object('occur-nsmet=2',cache=2)
-#    df = cksmet.io.load_object('occur-nsmet=5',cache=2)
-#    df = cksmet.io.load_object('occur-nsmet=10',cache=2)
-#    df = cksmet.io.load_object('occur-nsmet=20',cache=2)
-    df = cksmet.io.load_object('occur-per=0.250-prad=physical-smet=0.1',cache=2)
-    df = cksmet.io.load_object('occur-per=0.250-prad=physical-smet=0.05',cache=2)
+
+    keys = [
+        # Used in fitting
+        'occur-per=0.05-prad=physical-smet=sub', # 
+        'occur-per=0.05-prad=physical-smet=sup',
+        'occur-per=0.05-prad=physical-smet=all',
+        'occur-per=hotwarm-prad=physical-smet=0.05',
+
+        # Used in plotting
+        'occur-per=0.25-prad=twoperoctave', # checkerboard plot/HJ rate
+        'occur-per=0.25-prad=physical-smet=all', # fig_occ-per
+        'occur-per=0.25-prad=physical-smet=sub', # fig_occ-per-small
+        'occur-per=0.25-prad=physical-smet=sup', # fig_occ-per-small
+        'occur-per=0.25-prad=physical-smet=0.2', # fig_occur-smet
+        'occur-per=0.25-prad=physical-smet=0.1', # fig_occur-smet
+#        'occur-per=hotwarm-prad=physical-smet=0.2', # fig_occur-smet
+    ]
+
+    for key in keys:
+        df = cksmet.io.load_object(key,cache=2)
 
 def fit_occur(args):
     fits = [
-        'fit_per-sub-se',
-        'fit_per-sup-se',
-        'fit_per-sub-sn',
-        'fit_per-sup-sn',
 
+#        'fit_per-sub-se',
+#        'fit_per-sup-se',
+#        'fit_per-sub-sn',
+#        'fit_per-sup-sn',
+#        'fit_per-all-se',
+#        'fit_per-all-sn',
+#        'fit_per-all-ss',
+#        'fit_per-all-jup',
 
-        'fit_per-all-se',
-        'fit_per-all-sn',
-        'fit_per-all-ss',
-        'fit_per-all-jup',
+#        'fit_smet-hot-se',
+#        'fit_smet-hot-sn',
+#        'fit_smet-hot-ss',
+#        'fit_smet-hot-jup',
 
-        'fit_smet-hot-se',
-        'fit_smet-hot-sn',
-        'fit_smet-hot-ss',
-        'fit_smet-hot-jup',
+#        'fit_smet-warm-se',
+#        'fit_smet-warm-sn',
+#        'fit_smet-warm-ss',
+#        'fit_smet-warm-jup',
 
-        'fit_smet-warm-se',
-        'fit_smet-warm-sn',
-        'fit_smet-warm-ss',
-        'fit_smet-warm-jup',
+#        'fit_persmet-hot-se',
+#        'fit_persmet-hot-sn',
+#        'fit_persmet-hot-ss',
+#        'fit_persmet-hot-jup',
 
-        'fit_persmet-hot-se',
-        'fit_persmet-hot-sn',
-        'fit_persmet-hot-ss',
-        'fit_persmet-hot-jup',
+        'fit_persmet-warm-se',
+        'fit_persmet-warm-sn',
+        'fit_persmet-warm-ss',
+        'fit_persmet-warm-jup',
 
     ]
 
@@ -230,7 +244,7 @@ class Workflow(object):
             i+=1
 
         if i==0:
-            assert False, key + " not a valid key"
+            assert False, name + " not a valid key"
 
     def update_paper(self):
         for kind, d in self.all_dict.iteritems():

@@ -266,7 +266,8 @@ $\Delta \log R_P$ = {:.2f} dex
     ylabel('Planet Size (Earth-radii)')
     
 def fig_checkerboard(plot_planetpoints=True):
-    occ  = cksmet.io.load_object('occur-nsmet=1') 
+    key = 'occur-per=0.25-prad=twoperoctave'
+    occ = cksmet.io.load_object(key,cache=1)
     sns.set_context('paper',font_scale=1.0)
     sns.set_style('ticks')
     fig,ax = subplots(figsize=(7,5.5))
@@ -387,16 +388,17 @@ def fig_per_smet():
     querys = ['1 <  perc < 100']*2  + ['1 < perc < 300']*2
     iax = [0,0,1,1]
     
+    dper = 0.25
     for i in range(4):
         sca(axL[iax[i]])
         size = sizes[i]
         smet = smets[i]
         query = querys[i]
-        occkey = 'occur-per=0.25-prad=physical-smet={}'.format(smet)
+        occkey = 'occur-per={}-prad=physical-smet={}'.format(dper,smet)
         fitkey = 'fit_per-{}-{}'.format(smet,size)
         occ = cksmet.io.load_object(occkey)
         cut = occ.df.query(query)
-        sampler = cksmet.plotting.occur.SamplerPer(fitkey,smet)
+        sampler = cksmet.plotting.occur.SamplerPer(fitkey, smet, dper)
         sampler.plot_all()
         plot_rates(xk,cut.ix[size],smet,fac=fac)
 
@@ -481,37 +483,32 @@ def fig_per():
     fig,axL = subplots(ncols=1,sharex=True,sharey=True,figsize=(5,5))
     loglog()
     xk = 'perc'
-
+    dper = 0.25
     # Super Earths
-    occ = cksmet.io.load_object('occur-per=0.25-prad=physical-smet=all',cache=1)
+    key = 'occur-per=0.25-prad=physical-smet=all'.format(dper)
+    occ = cksmet.io.load_object(key,cache=1)
     cut = occ.df.query('1 <  perc < 100')
     size='se'
-    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-se',size)
+    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-se', size, dper)
     sampler.plot_all()
     fac = 1
     plot_rates(xk,cut.ix[size],size,fac=fac)
 
     # Sub Neptunes
-    occ = cksmet.io.load_object('occur-per=0.25-prad=physical-smet=all',cache=1)
+    key = 'occur-per=0.25-prad=physical-smet=all'.format(dper)
+    occ = cksmet.io.load_object(key,cache=1)
     cut = occ.df.query('1 <  perc < 350')
     size='sn'
-    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-sn',size)
+    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-sn', size, dper)
     sampler.plot_all()
     plot_rates(xk, cut.ix[size], size, fac=fac)
 
-    # Sub Satruns 
+    # Just plot the rates for Sub-Sat and hot Jup
     size='ss'
-    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-ss',size)
-    plot_rates(xk, cut.ix[size], size, fac=fac)
-
-    # Sub Satruns 
-    size='ss'
-    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-ss',size)
     plot_rates(xk, cut.ix[size], size, fac=fac)
 
     # Sub Satruns 
     size='jup'
-    sampler = cksmet.plotting.occur.SamplerPer('fit_per-all-jup',size)
     plot_rates(xk, cut.ix[size], size, fac=fac)
 
     ylabel('Planets per 100 Stars per 0.25 dex $P$ Interval')
@@ -588,9 +585,14 @@ def plot_rates(xk, occur, fmtkey,fac=1.0, **kw):
         plot(x,occur.rate_ul*fac,**ulkw)
 
 class Sampler(object):
-    def __init__(self, key, fmtkey):
+    nsamples = 1000
+    def __init__(self, key, fmtkey, dx):
+        """
+        dx : size of phase-space volume to integrate occurrence 
+        """
         self.fit = cksmet.io.load_object(key)
         self.fmtkey = fmtkey
+        self.dx = dx
 
     def plot_band(self):
         p16, p50, p84 = np.percentile(self.fit_samples,[16,50,84],axis=0)
@@ -613,17 +615,20 @@ class Sampler(object):
         return _params 
 
     def compute_samples(self):
-        psamples = self.fit.sample_chain(1000)
+        psamples = self.fit.sample_chain(self.nsamples)
         fit_samples = []
         for i, params in psamples.iterrows():
             params = self.dict_to_params(params)
-            fit_samples.append(self.fit.model(params,self.x))
+            fit_samples.append(self.model(params))
         self.fit_samples = np.vstack(fit_samples)
+
+    def model(self,params):
+        """Compute planet occurrence integrated over volumes of size dx""" 
+        return self.fit.model(params,self.x) * self.dx 
 
     def compute_best(self):
         params = self.fit.pfit
-        self.fit_best = self.fit.model(params,self.x)
-
+        self.fit_best = self.model(params)
 
 class SamplerSmet(Sampler):
     x = np.linspace(-0.4,0.4,10) 
@@ -632,52 +637,32 @@ class SamplerPerSmet(Sampler):
     smet1 = -0.4
     smet2 = 0.4
     x = linspace(smet1,smet2,10)
-    smetwidth = 0.2
+    dsmet = 0.2
 
-    def compute_samples(self):
-        psamples = self.fit.sample_chain(1000)
-        fit_samples = []
-        for i, params in psamples.iterrows():
-            fit_samples.append(self.model(params))
-        self.fit_samples = np.vstack(fit_samples)
+    def __init__(self, key, fmtkey, perlims, smet_field):
+        self.fit = cksmet.io.load_object(key)
+        self.fmtkey = fmtkey
+        self.smet_field = smet_field
+        self.perlims = perlims
 
     def compute_best(self):
         p = self.fit.pfit.valuesdict()
         self.fit_best = self.model(p)
 
-    # Integrate over the period axis
+    # Overload the model method
     def model(self, params):
         fit_sample = []
         for _smeti in self.x:
-            _smet1 = _smeti - 0.5*self.smetwidth
-            _smet2 = _smeti + 0.5*self.smetwidth
-            _per1 = 1
-            _per2 = 10
-            lims = [[_per1,_per2],[_smet1,_smet2]]
-            val = cksmet.fit.per_powerlaw_smet_exp_integral(params,lims)
-            val = val / self.smetwidth # divide by the size of the bin
+            _smet1 = _smeti - 0.5*self.dsmet
+            _smet2 = _smeti + 0.5*self.dsmet
+            smet = self.smet_field[self.smet_field.between(_smet1,_smet2)]
+            val = cksmet.fit.per_powerlaw_smet_exp_integral(params, self.perlims, smet)
             fit_sample.append(val)
         fit_sample = np.array(fit_sample)
         return fit_sample
 
 class SamplerPer(Sampler):
     x = np.logspace(log10(1),log10(350), 100)
-    binwper = 0.25
-    def model(self,params):
-        return self.fit.model(params, self.x) / self.fit.pfit['binwper'].value * self.binwper
-
-    def compute_samples(self):
-        psamples = self.fit.sample_chain(1000)
-        fit_samples = []
-        for i, params in psamples.iterrows():
-            params = self.dict_to_params(params)
-            fit_samples.append(self.model(params))
-        self.fit_samples = np.vstack(fit_samples) 
-
-    def compute_best(self):
-        params = self.fit.pfit
-        self.fit_best = self.model(params)
-
 
 def sum_cells_per(df0):
     df2 = []
@@ -691,76 +676,57 @@ def sum_cells_per(df0):
     return df2
     
 def fig_smet_warm():
-    occ = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=1)
+    key = 'occur-per=hotwarm-prad=physical-smet=0.2'
+    occ = cksmet.io.load_object(key,cache=1)
     df = occ.df
     df = df[df.smetc.between(-0.4,0.4)]
     xk = 'smetc'
     dist = 'warm'
 
-    size = 'se'
-    cut = df.ix[dist,size]
-    plot_rates(xk, cut, size)
-    sampler = SamplerSmet('fit_smet-{}-{}'.format(dist,size),size)
-    sampler.plot_all()
-    
-    size = 'sn'
-    cut = df.ix[dist,size]
-    plot_rates(xk, cut, size)
-    sampler = SamplerSmet('fit_smet-{}-{}'.format(dist,size),size)
-    sampler.plot_all()
-    
-    size = 'ss'
-    cut = df.ix[dist,size]
-    plot_rates(xk, cut, size)
-    sampler = SamplerSmet('fit_smet-{}-{}'.format(dist,size),size)
-    sampler.plot_all()
-    
-    size = 'jup'
-    cut = df.ix[dist,size]
-    plot_rates(xk, cut, size)
-    sampler = SamplerSmet('fit_smet-{}-{}'.format(dist,size),size)
-    #sampler.plot_all()
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = lamo[~lamo.isany]
+    smet_field = lamo.lamo_smet
+
+    sizes = 'se sn ss jup'.split()
+    plot_fits = [True, True, True, False]
+    for i in range(4):
+        size = sizes[i]
+        plot_fit = plot_fits[i]
+        cut = df.ix[dist,size]
+        plot_rates(xk, cut, size)
+        fitkey = 'fit_persmet-{}-{}'.format(dist, size)
+        sampler = SamplerPerSmet(fitkey, size, smet_field)
+        if plot_fit:
+            sampler.plot_all()
 
     ylabel('Planets per 100 Stars')
     ylim(1e-3,1)
 
 def fig_smet_hot():
-    binwper = 0.25
+    """
+    Display the integrated planet occurrence from P = 1-10 days 
+    """
+
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = lamo[~lamo.isany]
+    smet_field = lamo.lamo_smet
+
     xk = 'smetc'
-    key = 'occur-per={:f}-prad=physical-smet=0.2'.format(binwper)
+    key = 'occur-per=0.25-prad=physical-smet=0.2'
     occ = cksmet.io.load_object(key)
+
     df = occ.df
     df = df[df.smetc.between(-0.4,0.4)]
+    sizes = 'se sn ss jup'.split()
+    for i in range(4):
+        size = sizes[i]
+        cut = df.ix[size].query('1 < perc < 10')
+        cut = sum_cells_per(cut) 
+        plot_rates(xk, cut, size)
+        fitkey = 'fit_persmet-hot-{}'.format(size)
+        sampler = SamplerPerSmet(fitkey, size, smet_field)
+        sampler.plot_all()
 
-    size = 'se'
-    cut = df.query('1 < perc < 10 and 1.0 < pradc < 1.7')
-    cut = sum_cells_per(cut)
-    plot_rates(xk, cut, size)
-    sampler = SamplerPerSmet('fit_persmet-hot-{}'.format(size),size)
-    sampler.plot_all()
-
-    cut = df.query('1 < perc < 10 and 1.7 < pradc < 4.0')
-    cut = sum_cells_per(cut)
-    size = 'sn'
-    plot_rates(xk, cut, size)
-    sampler = SamplerPerSmet('fit_persmet-hot-{}'.format(size),size)
-    sampler.plot_all()
-
-    occ = cksmet.io.load_object('occur-nper=2-nsmet=5',cache=1)
-    df = occ.df
-    df = df[df.smetc.between(-0.4,0.4)]
-
-    size = 'ss'
-    cut = df.ix['hot',size]
-    plot_rates(xk, cut, size)
-    sampler = SamplerPerSmet('fit_persmet-hot-{}'.format(size),size)
-    sampler.plot_all()
-
-    size = 'jup'
-    cut = df.ix['hot',size]
-    plot_rates(xk, cut, size)
-    sampler = SamplerPerSmet('fit_persmet-hot-{}'.format(size),size)
-    sampler.plot_all()
     ylabel('Planets per 100 Stars')
     ylim(1e-5,1)
 
@@ -770,33 +736,65 @@ def yticks_planets_per_100_stars():
     yticks(yt,syt)
 
 def fig_smet():
+    """Figure showing total occurrence in hot and cold regions for
+    different planet classes. Also show the best fit curves.  Because
+    the fits are surfaces in smet and perc we cannot display on a 2D
+    graph. We integrate over period to compute the occurrence just as
+    a function of metallicity. The bins are added up.
+    """
     sns.set_context('paper',font_scale=1.0)
-    fig, axL = subplots(ncols=2,nrows=1,figsize=(6,5),sharex=True,sharey=True)
+    fig, axL = subplots(ncols=2,nrows=1,figsize=(7.5,5),sharex=True)
     sca(axL[0])
-    fig_smet_hot()
 
-    yticks_planets_per_100_stars()
-    title('$P = 1-10$ days')
-    fig_label('a')
+    xk = 'smetc'
+    key = 'occur-per=0.25-prad=physical-smet=0.2'
+    occ = cksmet.io.load_object(key)
+    df = occ.df
+    df = df[df.smetc.between(-0.4,0.4)]
 
-    sca(axL[1])
-    fig_smet_warm()
-    yticks_planets_per_100_stars()
-    ylim(1e-4,1)
-    ylabel('')
-    fig_label('b')
-    title('$P = 10-100$ days')
-    
-    fig.set_tight_layout(True)
-    xlim(-0.4,0.4)
-    setp(axL, xlabel='[Fe/H]')
+    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = lamo[~lamo.isany]
+    smet_field = lamo.lamo_smet
+
+    sizes = 'se sn ss jup se sn ss jup'.split()
+    dists = 'hot hot hot hot warm warm warm warm'.split()
+    plot_fits = [True, True, True, True, True, True, True, False]
+    for i in range(8):
+        size = sizes[i]
+        plot_fit = plot_fits[i]
+        dist = dists[i]
+        if dist=='hot':
+            perlim = [1,10]
+            sca(axL[0])
+        elif dist=='warm':
+            perlim = [10,100]
+            sca(axL[1])
+            
+        cut = df.ix[size]
+        cut = cut[cut.perc.between(*perlim)]
+        cut = sum_cells_per(cut) 
+        plot_rates(xk, cut, size)
+        fitkey = 'fit_persmet-{}-{}'.format(dist, size)
+        sampler = SamplerPerSmet(fitkey, size, perlim, smet_field)
+        if plot_fit:
+            sampler.plot_all()
 
     sca(axL[0])
-    i = 1
+    i = 0
     for size in 'se sn ss jup'.split():
         s =  "\n"*i + namedict[size] 
-        text(0.1, 1, s, color=ptcolor[size],va='top',ha='left')
+        text(0.6, 0.97, s, color=ptcolor[size],va='top',ha='left', transform=axL[0].transAxes,size='small')
         i+=1
+
+    for ax in axL:
+        sca(ax)
+        yticks_planets_per_100_stars()
+        ylabel('Planets per 100 Stars')
+        ylim(1e-4,1)
+        xlim(-0.4,0.4)
+        xlabel('[Fe/H]')
+
+    fig.set_tight_layout(True)
 
 def add_anchored(*args,**kwargs):
     """
