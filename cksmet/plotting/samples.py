@@ -1,16 +1,13 @@
 import string
 
-from matplotlib.ticker import MaxNLocator
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 from matplotlib.pylab import *
 import seaborn as sns
 import pandas as pd
-
-import cksmet.io
-import cksmet.cuts
 from astropy import constants as c
 
-figsize = (4,5)
+import cksmet.io
+from cksmet.plotting.config import * 
+
 errorbar_kw = dict(fmt='.',markersize=5,color='b')
 
 sns.set_style('whitegrid')
@@ -19,16 +16,12 @@ sns.set_color_codes()
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
 texteff = '$\mathregular{T}_{\mathregular{eff}}$'
 
-def add_anchored(*args,**kwargs):
-    ax = gca()
-    at = AnchoredText(*args,**kwargs)
-    ax.add_artist(at)
-
 def samples():
     ncols = 3
     nrows = 3
     height = 2.5 * nrows
     width = 3.0 * ncols
+
     fig, axL = subplots(nrows=nrows, ncols=ncols, figsize=(width, height))
 
     lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
@@ -42,7 +35,6 @@ def samples():
     
     field = cksmet.io.load_table('field-cuts',cache=1)
     fieldc = field.query('isany==False')
-
 
     kwpts = dict(color='LightGray',rasterized=True,marker='o',ms=1.5,lw=0)
     kwptsc = dict(color='b',rasterized=True,marker='o',ms=1.5,lw=0)
@@ -124,7 +116,6 @@ def samples():
         sca(ax)
         add_anchored('Field',loc=1)
 
-
     for ax, letter in zip(axL.flatten(),string.ascii_lowercase):
         sca(ax)
         add_anchored(
@@ -149,7 +140,9 @@ def lamo_detectability():
         color=colors[i]
         label=labels[i]
         cut = lamo.query(query) 
-        plot(cut.kepmag,cut.cdpp3,'.',color=color,zorder=1,label=label,alpha=0.8)
+        plot(
+            cut.kepmag,cut.cdpp3,'.',color=color,zorder=1,label=label,alpha=0.8
+        )
         g = cut.groupby(pd.cut(cut.kepmag,bins))
         i = 0
 
@@ -173,7 +166,6 @@ def lamo_detectability():
     yticks([20,30,40,50,60,70,80,90,100],[20,30,40,50,60,70,80,90,100])
     fig1.set_tight_layout(True)
 
-
     fig2 = figure(figsize=(4,4))
     kepmag = (12,14)
     cut2 = lamo[lamo.kepmag.between(*kepmag)]
@@ -195,8 +187,9 @@ def lamo_detectability():
     fig2.set_tight_layout(True)
     return fig1,fig2
 
-
 def smet_snr():
+    sns_set_style('ticks')
+    fig,axL = subplots(figsize=(4,4))
     df = pd.read_csv('isoclassify-lamost-dr2.csv')
     huber14 = cksmet.io.load_table('huber14+cdpp',cache=1)
     lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
@@ -204,7 +197,6 @@ def smet_snr():
     lamo = pd.merge(lamo,huber14['id_kic kepmag cdpp3'.split()],on='id_kic')
     df = pd.merge(lamo,df,left_on='id_kic',right_on='id_starname')
 
-    fig = figure(figsize=(4,4))
     semilogy()
     srad = df.iso_srad * c.R_sun
     prad = 1 * c.R_earth

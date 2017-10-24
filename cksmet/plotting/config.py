@@ -1,5 +1,7 @@
 from matplotlib.pylab import * 
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+import seaborn as sns
+
 
 def add_anchored(*args,**kwargs):
     """
@@ -38,3 +40,16 @@ def fig_label(text):
         prop=dict(size='large', weight='bold'),
         bbox=dict(ec='none', fc='w', alpha=0.0)
     )
+
+def sns_set_style(key):
+    if key=='ticks':
+        sns.set(
+            style='ticks',
+            rc={'ytick.major.size':3.0,'xtick.major.size':3.0,
+                'xtick.direction': u'out','ytick.direction': u'out'
+            }
+        )
+        sns.set_context('paper',font_scale=1.1)
+    if key=='whitegrid':
+        sns.set_style('whitegrid')
+        sns.set_context('paper',font_scale=1.1)

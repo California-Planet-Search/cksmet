@@ -8,7 +8,6 @@ from matplotlib.patches import Rectangle
 import matplotlib.patheffects as path_effects
 from matplotlib.transforms import blended_transform_factory as btf
 
-
 import cksmet.io
 import cksmet.analysis
 import cksmet.occur
@@ -32,9 +31,6 @@ bdcolor = {
     'ss':'light mustard',
     'jup':'light pink'
 }
-
-#for k in ptcolor.keys():
-#    bdcolor[k] = sns.xkcd_rgb[bdcolor[k]]
 
 namedict = {
     'se':'Super-Earths',
@@ -95,9 +91,8 @@ def calc_contour():
     return df
 
 def fig_contour_all(scale='log'):
-    sns.set_context('paper',font_scale=1.0)
-    sns.set_style('ticks')
-    fig, axL = subplots(nrows=2,ncols=2,figsize=(8,6.5),sharex=False,sharey=False)
+    sns_set_style('ticks')
+    fig, axL = subplots(nrows=2,ncols=2,figsize=(8,6.5))
 
     sca(axL[0,0])
     fig_label("a")
@@ -146,8 +141,6 @@ def contour(scale='linear', plot_planetpoints=True, plot_interval=False,
 
     ds = test.to_xarray()
     cut = ds
-    #cut = ds.where((ds.per2 < 350) & (ds.prob_det_mean > 0.25))
-    
 
     rate = cut.rate
     rate = rate.fillna(4e-6)
@@ -431,8 +424,7 @@ def fig_per_smet():
 import cksmet.tables
 
 def fig_summary():
-    sns.set_context('paper',font_scale=1.0)
-    sns.set_style('ticks')
+    sns_set_style('ticks')
     fig,ax = subplots(figsize=(5,4))
     perbins = [1, 10, 100]
     pers = ['hot','warm']
@@ -457,7 +449,8 @@ def fig_summary():
             ptype = "%s %s" % (per.capitalize(),namedict[size])
             s = ""
             s+= "%s \n" % ptype
-
+            s+=r"$\left<\mathrm{[Fe/H]}\right>$ = $%s \pm %s$" % (d[ptype+" mean"],d[ptype+" sem"])
+            s+="\n"
             pstr = fit.to_string()
             for _pstr in pstr:
                 if _pstr.count('beta')==1:
@@ -469,8 +462,6 @@ def fig_summary():
                 _pstr = r"$\beta$ = Unconstrained" 
 
             s+=_pstr 
-            s+='\n'
-            s+=r"$\left<\mathrm{[Fe/H]}\right>$ = $%s \pm %s$" % (d[ptype+" mean"],d[ptype+" sem"])
 
 
             ax.annotate(s, xy=xytext, xytext=(3, -2.5),textcoords='offset points',size='x-small',va='top')
@@ -752,7 +743,7 @@ def fig_smet():
     graph. We integrate over period to compute the occurrence just as
     a function of metallicity. The bins are added up.
     """
-    sns.set_context('paper',font_scale=1.1)
+    sns_set_style('ticks')
     fig, axL = subplots(ncols=2,nrows=1,figsize=(7,5),sharex=True)
     sca(axL[0])
 
@@ -795,6 +786,10 @@ def fig_smet():
         s =  "\n"*i + namedict[size] 
         text(0.65, 0.97, s, color=ptcolor[size],va='top',ha='left', transform=axL[0].transAxes,size='small')
         i+=1
+
+    for i in range(2):
+        letters = ["a","b"]
+        fig_label(letters[i])
 
     for ax in axL:
         sca(ax)

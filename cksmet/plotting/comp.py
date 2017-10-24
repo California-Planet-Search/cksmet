@@ -1,5 +1,6 @@
 from matplotlib.pylab import *
 import seaborn as sns
+
 from cksmet.plotting.config import *
 import cksmet.io
 
@@ -12,6 +13,25 @@ def label():
     yticks(yt,yt)
     fig = gcf()
     rename()
+
+def rename():
+    """
+    Plotting routines will give short machine readable names, here we
+    change to human-readable names
+    """
+    fig = gcf()
+    namemap = {
+        'prob_det':'Prob Det.',
+        'prob_tr':'Prob Tr.',
+        'prob_trdet':'Prob Tr. and Det.',
+        'plnt_occur':'Planet Occurrence per Bin',
+        'prad':'Planet Size (Earth-radii)',
+        'fstars':'Completeness',
+    }
+    for o in fig.findobj(matplotlib.text.Text):
+        for oldname, newname in namemap.iteritems():
+            if o.get_text()==oldname:
+                o.set_text(newname)
 
 def mesfac(st):
     fig,axL = subplots(ncols=2,figsize=(8,4))
@@ -59,10 +79,8 @@ def compare_prob_det_direct_interp(comp):
     fig.set_tight_layout(True)
 
 def fig_prob_detect_transit():
-    sns.set_style('whitegrid')
-    sns.set_context('paper')
+    sns_set_style('whitegrid')
     fig,axL = subplots(ncols=2,figsize=(7.25,2.75),)
-
     comp = cksmet.io.load_object('comp',cache=1)
 
     ds = comp.grid.ds
@@ -75,6 +93,7 @@ def fig_prob_detect_transit():
     )
 
     sca(axL[0])
+    fig_label("a")
     loglog()
     im = ds['prob_det'].plot.contourf(**kw)
     cbar = colorbar(im,shrink=0.5)
@@ -84,6 +103,7 @@ def fig_prob_detect_transit():
 
     label()
     sca(axL[1])
+    fig_label("b")
     loglog()
     kw['levels'] = [0.000,0.001,0.010,0.020,0.050,0.100]
     im = ds['prob_trdet'].plot.contourf(**kw)

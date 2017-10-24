@@ -1,10 +1,11 @@
-from collections import Iterable
 import string
+from collections import Iterable
 
-from matplotlib.pylab import *
-from matplotlib.ticker import FuncFormatter, MaxNLocator
 import pandas as pd
 import seaborn as sns
+from matplotlib.pylab import *
+from matplotlib.ticker import FuncFormatter, MaxNLocator
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
 import cksphys.io
 import cksmet.io
@@ -160,14 +161,7 @@ def per_smet_percentiles():
 
 
 def fig_percentiles():
-    sns.set(
-        style='ticks',
-        rc={'ytick.major.size':3.0,'xtick.major.size':3.0,
-            'xtick.direction': u'out','ytick.direction': u'out'
-        }
-    )
-    sns.set_context('paper')
-
+    sns_set_style('ticks')
     fig,axL = subplots(nrows=1, ncols=2, sharey=True,figsize=(7.25,3.5))
     sca(axL[0])
     prad_smet_percentiles()
@@ -247,13 +241,7 @@ def prad_fe_fit():
 
 
 def cuts():
-    sns.set(
-        style='ticks',
-        rc={'ytick.major.size':3.0,'xtick.major.size':3.0,
-            'xtick.direction': u'out','ytick.direction': u'out'
-        }
-    )
-
+    sns_set_style('ticks')
     df =  cksmet.io.load_table('cks-cuts',cache=1)
 
     cuttypes = cksmet.cuts.plnt_cuttypes
@@ -262,8 +250,8 @@ def cuts():
     nrows = 2
     ncols = 4
 
-    width = ncols * 2.5
-    height = nrows * 2.5
+    width = ncols * 2
+    height = nrows * 2
 
     fig, axL = subplots(
         nrows=nrows,ncols=ncols,figsize=(width,height),
@@ -309,30 +297,20 @@ def cuts():
     axL = axL.reshape(nrows,ncols)
     setp(axL[-1,:],xlabel='$R_p\, (R_{\oplus})$')
     setp(axL[:,0],ylabel='[Fe/H]')
-    fig.set_tight_layout(False)
+    #tight_layout()
 
-    fig.subplots_adjust(hspace=0.001,wspace=0.001,left=0.07,right=0.99,top=0.95,bottom=0.10)
-
-    axL = axL.flatten()
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+    fig.subplots_adjust(hspace=0.001,wspace=0.001,left=0.07,right=0.99,top=0.95,bottom=0.12)
 
 def period_prad_slices(mode='tall'):
-    sns.set(
-        style='ticks',
-        rc={'ytick.major.size':3.0,'xtick.major.size':3.0,
-            'xtick.direction': u'out','ytick.direction': u'out'
-        }
-    )
-
-    #sns.set_style('whitegrid')
+    sns_set_style('ticks')
     sns.set_color_codes()
 
     yt = [0.5, 1, 2, 4, 8, 16, 32]
     xt = [0.3, 1, 3, 10, 30, 100, 300]
 
     # Provision figure
-    height = 3.75
-    width = 4
+    height = 3.375
+    width = 3.6
     if mode=='four-equal-smet':
         smet_bins = [-0.75, -0.45, -0.15, 0.15, 0.45]
         
