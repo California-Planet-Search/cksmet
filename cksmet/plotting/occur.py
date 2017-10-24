@@ -236,6 +236,7 @@ $\Delta \log R_P$ = {:.2f} dex
             text(log10(30),log10(3),'Warm Sub-Neptunes', **kw)
             text(log10(20),log10(1),'Warm Super-Earths',**kw)
             text(log10(30),log10(1.7),'Radius Gap',rotation=-10,**kw)
+            text(log10(150),log10(16),'Cool Jupiters',**kw)
 
         if scale=='log':
             kw = dict(

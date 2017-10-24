@@ -115,9 +115,9 @@ def smet_stats():
 
     lines = []
     lines.append(r"Mean & {:.3f} & {:.3f} & {:.3f} \\".format(cks.mean(), field.mean(), lamo.mean()))
-    lines.append(r"St. Dev. & {:.3f} & {:.3f}  & {:.3f} \\".format(cks.std(), field.std(), lamo.std()))
+    lines.append(r"RMS & {:.3f} & {:.3f}  & {:.3f} \\".format(cks.std(), field.std(), lamo.std()))
     func = lambda x : x.std()/np.sqrt(len(x))
-    lines.append(r"St. Err. Mean & {:.3f} & {:.3f} & {:.3f} \\".format(
+    lines.append(r"SEM & {:.3f} & {:.3f} & {:.3f} \\".format(
         func(cks), func(field), func(lamo)
     )
     )
