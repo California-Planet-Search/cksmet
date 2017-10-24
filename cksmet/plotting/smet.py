@@ -44,7 +44,7 @@ def per_fe_label():
 
 def prad_fe_errbar():
     cks = cksmet.io.load_table('cks-cuts',cache=1)
-    ebarx = 10.
+    ebarx = 8.
     ebary = -0.51
     xferr = (cks.iso_prad_err1 / cks.iso_prad).median()    
     xerr = [[ ebarx - ebarx/(1+xferr) ], [ebarx*(1+xferr) - ebarx]]
