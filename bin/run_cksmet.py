@@ -91,29 +91,19 @@ def calc_occur(args):
 def fit_occur(args):
     fits = [
 
-#        'fit_per-sub-se',
-#        'fit_per-sup-se',
-#        'fit_per-sub-sn',
-#        'fit_per-sup-sn',
-#        'fit_per-all-se',
-#        'fit_per-all-sn',
-#        'fit_per-all-ss',
-#        'fit_per-all-jup',
+        'fit_per-sub-se',
+        'fit_per-sup-se',
+        'fit_per-sub-sn',
+        'fit_per-sup-sn',
+        'fit_per-all-se',
+        'fit_per-all-sn',
+        'fit_per-all-ss',
+        'fit_per-all-jup',
 
-#        'fit_smet-hot-se',
-#        'fit_smet-hot-sn',
-#        'fit_smet-hot-ss',
-#        'fit_smet-hot-jup',
-
-#        'fit_smet-warm-se',
-#        'fit_smet-warm-sn',
-#        'fit_smet-warm-ss',
-#        'fit_smet-warm-jup',
-
-#        'fit_persmet-hot-se',
-#        'fit_persmet-hot-sn',
-#        'fit_persmet-hot-ss',
-#        'fit_persmet-hot-jup',
+        'fit_persmet-hot-se',
+        'fit_persmet-hot-sn',
+        'fit_persmet-hot-ss',
+        'fit_persmet-hot-jup',
 
         'fit_persmet-warm-se',
         'fit_persmet-warm-sn',

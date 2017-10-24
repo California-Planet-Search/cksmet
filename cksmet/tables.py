@@ -4,6 +4,8 @@ import numpy as np
 import cksmet.cuts
 from collections import OrderedDict
 import pandas as pd
+import numpy as np
+import cksmet.io
 
 def cuts_planets():
     """
@@ -56,9 +58,6 @@ def cut_statistics(df, sample, cuttypes):
         npassallprev = npassall
 
     return lines
-import numpy as np
-import cksmet.io
-
 def occurrence(stub=False):
     key = 'occur-per=0.25-prad=twoperoctave'
     occ = cksmet.io.load_object(key,cache=1)
@@ -137,20 +136,15 @@ def val_fit():
         'fit_per-sub-sn',
         'fit_per-sup-sn',
 
-        'fit_smet-hot-se',
-        'fit_smet-hot-sn',
-        'fit_smet-hot-ss',
-        'fit_smet-hot-jup',
-
-        'fit_smet-warm-se',
-        'fit_smet-warm-sn',
-        'fit_smet-warm-ss',
-        'fit_smet-warm-jup',
-
         'fit_persmet-hot-se',
         'fit_persmet-hot-sn',
         'fit_persmet-hot-ss',
         'fit_persmet-hot-jup',
+
+        'fit_persmet-warm-se',
+        'fit_persmet-warm-sn',
+        'fit_persmet-warm-ss',
+        'fit_persmet-warm-jup',
     ]
     lines = []
     for key in fits:

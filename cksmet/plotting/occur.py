@@ -427,6 +427,7 @@ def fig_per_smet():
     fig.set_tight_layout(True)
 
 import cksmet.tables
+
 def fig_summary():
     sns.set_context('paper',font_scale=1.0)
     sns.set_style('ticks')
@@ -447,18 +448,25 @@ def fig_summary():
             xytext = xy[0],xy[1]+h
             
             print xy
-            fitkey = 'fit_smet-{}-{}'.format(per,size)
+            fitkey = 'fit_persmet-{}-{}'.format(per,size)
             fit = cksmet.io.load_object(fitkey,cache=1)
 
-            rect = Rectangle(xy, w, h, lw=1,ec='r',fc='none',zorder=4)
+            rect = Rectangle(xy, w, h, lw=1,ec='r',fc='none',zorder=10)
             ptype = "%s %s" % (per.capitalize(),namedict[size])
             s = ""
             s+= "%s \n" % ptype
-            if fitkey=='fit_smet-warm-jup':
-                 s+=r"$\beta$ = Unconstrained" 
-            else:
-                 s+=r"$\beta = %s$" % fit.to_string()[1].replace(r'{beta}','').replace(r"{$","").replace("$}","")
-            
+
+            pstr = fit.to_string()
+            for _pstr in pstr:
+                if _pstr.count('beta')==1:
+                    _pstr = _pstr.replace(r'{beta}','')
+                    _pstr = _pstr.replace(r"{$","").replace("$}","")
+                    _pstr = r"$\beta = %s$" % _pstr
+
+            if fitkey=='fit_persmet-warm-jup':
+                _pstr = r"$\beta$ = Unconstrained" 
+
+            s+=_pstr 
             s+='\n'
             s+=r"$\left<\mathrm{[Fe/H]}\right>$ = $%s \pm %s$" % (d[ptype+" mean"],d[ptype+" sem"])
 
@@ -468,19 +476,19 @@ def fig_summary():
             #text(xy[0],xy[1],s,zorder=10)
             ax.add_patch(rect)
 
-    yt = [0.5, 1, 2, 4, 8, 16, 32]
-    xt = [0.3,1, 3, 10, 30, 100, 300]
+    yt = [1, 1.7, 4.0, 8.0, 24.0]
+    xt = [1, 10, 100]
     xticks(xt,xt)
     yticks(yt,yt)
     xlabel('Orbital Period (days)')
     ylabel('Planet size (Earth-radii)')
-    setp(ax,xlim=(0.5,300),ylim=(0.5,32))
+    setp(ax,xlim=(1,100),ylim=(1,24))
     minorticks_off()
     fig.set_tight_layout(True)
 
 def fig_per():
     sns.set_context('paper',font_scale=1.1)
-    fig,axL = subplots(ncols=1,sharex=True,sharey=True,figsize=(5,5))
+    fig,axL = subplots(ncols=1,sharex=True,sharey=True,figsize=(5,4))
     loglog()
     xk = 'perc'
     dper = 0.25
@@ -742,8 +750,8 @@ def fig_smet():
     graph. We integrate over period to compute the occurrence just as
     a function of metallicity. The bins are added up.
     """
-    sns.set_context('paper',font_scale=1.0)
-    fig, axL = subplots(ncols=2,nrows=1,figsize=(7.5,5),sharex=True)
+    sns.set_context('paper',font_scale=1.1)
+    fig, axL = subplots(ncols=2,nrows=1,figsize=(7,5),sharex=True)
     sca(axL[0])
 
     xk = 'smetc'
@@ -783,7 +791,7 @@ def fig_smet():
     i = 0
     for size in 'se sn ss jup'.split():
         s =  "\n"*i + namedict[size] 
-        text(0.6, 0.97, s, color=ptcolor[size],va='top',ha='left', transform=axL[0].transAxes,size='small')
+        text(0.65, 0.97, s, color=ptcolor[size],va='top',ha='left', transform=axL[0].transAxes,size='small')
         i+=1
 
     for ax in axL:

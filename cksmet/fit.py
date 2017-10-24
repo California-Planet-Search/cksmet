@@ -7,7 +7,7 @@ import corner
 from lmfit import Parameters
 import numpy as np
 
-fmt = {'kp':"{:.3f}",'logkp':"{:.2f}",'beta':"{:+.1f}",'alpha':"{:+.1f}",'gamma':"{:.1f}",'gamma+beta':"{:.1f}",'per0':"{:.1f}"}
+fmt = {'kp':"{:.3f}",'logkp':"{:+.2f}",'beta':"{:+.1f}",'alpha':"{:+.1f}",'gamma':"{:.1f}",'gamma+beta':"{:.1f}",'per0':"{:.1f}"}
 
 class Fit(object):
     def __init__(self, x, dx, nplnt, ntrial):

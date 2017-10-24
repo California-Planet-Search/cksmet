@@ -123,8 +123,7 @@ def to_string(d):
         s+="\\nodata & "
         
     s+="{prad1:.1f}--{prad2:.1f} & "
-    s+="{n:.0f} & {mean:+.2f} & "
-    s+="{sem:.2f} & "
+    s+="{n:.0f} & {mean:+.2f} \pm {sem:.2f} & "
     s+="{ttest_stat:.1f} & < \\num{{{ttest_pval_max:.0e}}} & "
     s+="{sigstr:s} "
     s+="\\\\"

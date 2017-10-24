@@ -50,6 +50,9 @@ def compare_prob_det_direct_interp(comp):
 
 def fig_prob_detect_transit():
     sns.set_style('whitegrid')
+    sns.set_context('paper')
+    fig,axL = subplots(ncols=2,figsize=(7.25,2.75),)
+
     comp = cksmet.io.load_object('comp',cache=1)
 
     ds = comp.grid.ds
@@ -58,22 +61,30 @@ def fig_prob_detect_transit():
 
     kw = dict(
         x='per', y='prad',cmap=cm.Blues_r,vmax=1,levels=arange(0,1.1,0.1),
-        zorder=0
+        zorder=0,add_colorbar=False
     )
 
-    fig,axL = subplots(ncols=2,figsize=(10,4),sharex=True, sharey=True)
     sca(axL[0])
     loglog()
-    ds['prob_det'].plot.contourf(**kw)
+    im = ds['prob_det'].plot.contourf(**kw)
+    cbar = colorbar(im,shrink=0.5)
+    cbar.set_label(r'$\left< p_{\mathrm{det}} \right>$',size='small')
+    t = cbar.ax.get_yticklabels()
+    setp(t,size='x-small')
+
     label()
-    #grid()
+
+
 
     sca(axL[1])
     loglog()
     kw['levels'] = [0.000,0.001,0.010,0.020,0.050,0.100]
-    ds['prob_trdet'].plot.contourf(**kw)
+    im = ds['prob_trdet'].plot.contourf(**kw)
+    cbar = colorbar(im,shrink=0.5)
+    cbar.set_label(r'$\left< p_{\mathrm{tr}} p_{\mathrm{det}} \right>$',size='small')
+    t = cbar.ax.get_yticklabels()
+    setp(t,size='x-small')
     label()
-    #grid()
 
     setp(axL,xlim=(1,300),ylim=(0.5,32))
-    fig.set_tight_layout(True)
+    tight_layout(rect=[0.05,0.01,0.99,0.99],pad=0.05)

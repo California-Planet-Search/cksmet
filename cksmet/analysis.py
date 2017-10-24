@@ -189,10 +189,9 @@ def load_occur(key):
     elif re.match('occur-per=(.*)-prad=twoperoctave', key):
         _, per, prad = key.split('-')
         per_bins = _per_bins(per)
-        prad_bins = prad_bins_dict['physical']
+        prad_bins = prad_bins_dict['two-per-octave']
         smet_bins = [-1,0.5]
         occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
-        prad_bins = prad_bins_dict['two-per-octave']
     else:
         assert False, "cannot parse {}".format(key)
     return occ
