@@ -1,31 +1,40 @@
 from matplotlib.pylab import * 
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
-def label():
-    xlabel('Orbital Period (days)')
-    ylabel('Planet Size (Earth-radii)')
-    xt = [1,3,10,30,100,300]
-    yt = [0.5,1,2,4,8,16]
-    xticks(xt,xt)
-    yticks(yt,yt)
-    fig = gcf()
-    rename()
-
-def rename():
+def add_anchored(*args,**kwargs):
     """
-    Plotting routines will give short machine readable names, here we
-    change to human-readable names
+    Parameters
+    ----------
+    s : string
+        Text.
 
+    loc : str
+        Location code.
+
+    pad : float, optional
+        Pad between the text and the frame as fraction of the font
+        size.
+
+    borderpad : float, optional
+        Pad between the frame and the axes (or *bbox_to_anchor*).
+
+    prop : `matplotlib.font_manager.FontProperties`
+        Font properties.
     """
-    fig = gcf()
-    namemap = {
-        'prob_det':'Prob Det.',
-        'prob_tr':'Prob Tr.',
-        'prob_trdet':'Prob Tr. and Det.',
-        'plnt_occur':'Planet Occurrence per Bin',
-        'prad':'Planet Size (Earth-radii)',
-        'fstars':'Completeness',
-    }
-    for o in fig.findobj(matplotlib.text.Text):
-        for oldname, newname in namemap.iteritems():
-            if o.get_text()==oldname:
-                o.set_text(newname)
+
+    bbox = {}
+    if kwargs.has_key('bbox'):
+        bbox = kwargs.pop('bbox')
+    at = AnchoredText(*args, **kwargs)
+    if len(bbox.keys())>0:
+        plt.setp(at.patch,**bbox)
+
+    ax = plt.gca()
+    ax.add_artist(at)
+
+def fig_label(text):
+    add_anchored(
+        text, loc=2, frameon=True, 
+        prop=dict(size='large', weight='bold'),
+        bbox=dict(ec='none', fc='w', alpha=0.0)
+    )

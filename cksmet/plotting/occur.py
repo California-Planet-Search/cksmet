@@ -1,18 +1,20 @@
-from matplotlib.pylab import *
 import seaborn as sns
-import matplotlib.patheffects as path_effects
-from matplotlib.transforms import blended_transform_factory as btf
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 import pandas as pd 
-import cksmet.io
 from scipy import ndimage as nd
 import lmfit 
 
+from matplotlib.pylab import *
+from matplotlib.patches import Rectangle
+import matplotlib.patheffects as path_effects
+from matplotlib.transforms import blended_transform_factory as btf
+
+
+import cksmet.io
 import cksmet.analysis
 import cksmet.occur
-from matplotlib.patches import Rectangle
+from cksmet.plotting.config import *
+
 sns.set_style('ticks')
-#sns.set_palette('bright')
 sns.set_color_codes()
 
 ptcolor = {
@@ -804,40 +806,3 @@ def fig_smet():
 
     fig.set_tight_layout(True)
 
-def add_anchored(*args,**kwargs):
-    """
-    Parameters
-    ----------
-    s : string
-        Text.
-
-    loc : str
-        Location code.
-
-    pad : float, optional
-        Pad between the text and the frame as fraction of the font
-        size.
-
-    borderpad : float, optional
-        Pad between the frame and the axes (or *bbox_to_anchor*).
-
-    prop : `matplotlib.font_manager.FontProperties`
-        Font properties.
-    """
-
-    bbox = {}
-    if kwargs.has_key('bbox'):
-        bbox = kwargs.pop('bbox')
-    at = AnchoredText(*args, **kwargs)
-    if len(bbox.keys())>0:
-        plt.setp(at.patch,**bbox)
-
-    ax = plt.gca()
-    ax.add_artist(at)
-
-def fig_label(text):
-    add_anchored(
-        text, loc=2, frameon=True, 
-        prop=dict(size='large', weight='bold'),
-        bbox=dict(ec='none', fc='w', alpha=0.0)
-    )

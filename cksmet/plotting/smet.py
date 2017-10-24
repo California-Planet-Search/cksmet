@@ -11,14 +11,13 @@ import cksmet.io
 import cksmet.cuts
 from cksmet.plotting.samples import add_anchored
 from cksmet.plotting import *
-
-#sns.set_style('whitegrid')
-#sns.set_color_codes()
+from cksmet.plotting.config import *
 
 texrp = '\mathregular{R}_\mathregular{P}' 
 texre = '\mathregular{R}_\mathregular{E}' 
 
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
+perticks = [0.3,1,3,10,30,100,300]
 
 letter_bbox_props = dict(
     boxstyle="round,pad=0.,rounding_size=0.2",fc='w',alpha=0.7,
@@ -34,17 +33,37 @@ def prad_fe_label():
     xlim(0.5,25)
     ylim(-0.6,0.5)
 
+def per_fe_label():
+    # median planet radius error
+    xlabel('Orbital Period (days)')
+    ylabel('[Fe/H]')
+    xticks(perticks,perticks)
+    xlim(0.3,300)
+    ylim(-0.6,0.5)
+
 def prad_fe_errbar():
     cks = cksmet.io.load_table('cks-cuts',cache=1)
-    ebarx = 12.
-    ebary = -0.5
+    ebarx = 10.
+    ebary = -0.51
     xferr = (cks.iso_prad_err1 / cks.iso_prad).median()    
     xerr = [[ ebarx - ebarx/(1+xferr) ], [ebarx*(1+xferr) - ebarx]]
     yerr = [[0.04],[0.04]]
     s='Median   \nUncert.   '
-    errorbar([ebarx], [ebary], yerr=yerr, xerr=xerr,fmt='o',zorder=10)
-    errorbar([ebarx], [ebary], yerr=yerr, xerr=xerr,fmt='o',lw=0,ms=0,label=s)
+    errorbar([ebarx], [ebary], yerr=yerr, xerr=xerr,fmt='o',zorder=10,color='g')
+    errorbar([ebarx], [ebary], yerr=yerr, xerr=xerr,fmt='o',lw=0,ms=0,label=s,color='g')
     legend(markerscale=0,frameon=True,scatterpoints=0,loc='lower right')
+
+def per_fe_errbar():
+    cks = cksmet.io.load_table('cks-cuts',cache=1)
+    ebarx = 0.50
+    ebary = -0.51
+    xferr = 1e-5
+    xerr = [[ ebarx - ebarx/(1+xferr) ], [ebarx*(1+xferr) - ebarx]]
+    yerr = [[0.04],[0.04]]
+    s='Median   \nUncert.   '
+    errorbar([ebarx], [ebary], yerr=yerr, xerr=xerr,fmt='o',zorder=10,color='g')
+    errorbar([ebarx], [ebary], yerr=yerr, xerr=xerr,fmt='o',lw=0,ms=0,label=s,color='g')
+    legend(markerscale=0,frameon=True,scatterpoints=0,loc='lower left')
 
 def bins_to_xerr(bin0,binc,bin1):
     xerr = [[np.array(binc - bin0)], [np.array(bin1 - binc)] ]
@@ -55,6 +74,11 @@ def _plot_prad_fe(cks, **kw):
     x = np.array(cks.iso_prad)
     y = np.array(cks.cks_smet)
     plot(x,y,'.', **kw)
+
+def _plot_per_fe(cks, **kw):
+    x = np.array(cks.koi_period)
+    y = np.array(cks.cks_smet)
+    plot(x,y,'.', **kw)
     
 def prad_fe():
     """Plot of planet radius vs stellar metallicty"""
@@ -62,9 +86,9 @@ def prad_fe():
     yk = 'cks_smet'
     cks = cks[~cks.isany]
     bins = [0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 8.0, 16]
-    cksbin = cksmet.io.table_bin(cks, bins, yk)
+    cksbin = table_bin(cks, bins, yk)
 
-    figure(figsize=(6,4))
+    #figure(figsize=(6,4))
     semilogx()
     _plot_prad_fe(cks)
     prad_fe_label()
@@ -73,7 +97,7 @@ def prad_fe():
     yerrk = 'cks_smet_mean_err'
     gcf().set_tight_layout(True)
 
-def prad_fe_percentiles():
+def prad_smet_percentiles():
     """Plot of planet radius vs stellar metallicty"""
     cks = cksmet.io.load_table('cks-cuts', cache=1)
     cks = cks[~cks.isany]
@@ -81,11 +105,13 @@ def prad_fe_percentiles():
     xk = 'binc'
     yk = 'cks_smet'
     yerrk = 'cks_smet_mean_err'
-    cksbin = cksmet.io.table_bin(cks, bins, yk)
-    figure(figsize=(6,4))
+    binkey = 'iso_prad'
+    cksbin = table_bin(cks, bins, yk, binkey)
+    #figure(figsize=(6,4))
     semilogx()
     _plot_prad_fe(cks,color='LightGray')
     prad_fe_label()
+    prad_fe_errbar()
 
     i = 0 
     for _i, row in cksbin.iterrows():
@@ -101,6 +127,73 @@ def prad_fe_percentiles():
             errorbar(x,row[pk],xerr=xerr,color='m',zorder=10)
         i+=1
     gcf().set_tight_layout(True)
+
+def per_smet_percentiles():
+    """Plot of planet radius vs stellar metallicty"""
+    cks = cksmet.io.load_table('cks-cuts', cache=1)
+    cks = cks[~cks.isany]
+    bins = 10**np.arange(np.log10(1),np.log10(150)+1e-5,0.25)
+    xk = 'binc'
+    yk = 'cks_smet'
+    yerrk = 'cks_smet_mean_err'
+    bink= 'koi_period'
+    cksbin = table_bin(cks, bins, yk, bink)
+    semilogx()
+    _plot_per_fe(cks,color='LightGray')
+    per_fe_label()
+    per_fe_errbar()
+
+    i = 0 
+    for _i, row in cksbin.iterrows():
+        x = row[xk]
+        xerr = [[x - row.bin0], [row.bin1 - x] ]
+        yerr = row[yerrk]
+        yk = 'cks_smet_mean'
+        y = row[yk]
+        errorbar(x, row[yk], xerr=xerr, yerr=yerr, color='r',zorder=10)
+        yk = 'cks_smet'
+        for p in [25,75]:
+            pk = yk+'_{:02d}'.format(p)
+            errorbar(x,row[pk],xerr=xerr,color='m',zorder=10)
+        i+=1
+    gcf().set_tight_layout(True)
+
+
+def fig_percentiles():
+    sns.set(
+        style='ticks',
+        rc={'ytick.major.size':3.0,'xtick.major.size':3.0,
+            'xtick.direction': u'out','ytick.direction': u'out'
+        }
+    )
+    sns.set_context('paper')
+
+    fig,axL = subplots(nrows=1, ncols=2, sharey=True,figsize=(7.25,3.5))
+    sca(axL[0])
+    prad_smet_percentiles()
+    fig_label("a")
+    sca(axL[1])
+    per_smet_percentiles()
+    setp(axL[1],ylabel='')
+    fig_label("b")
+    tight_layout(True)
+
+def table_bin(df, bins, key, binkey):
+    g = df.groupby(pd.cut(df[binkey],bins=bins))
+    g = g[key]
+    dfbin = pd.DataFrame(index=g.first().index)
+    dfbin['bin0'] = bins[0:-1]
+    dfbin['bin1'] = bins[1:]
+    dfbin['binc'] = dfbin.eval('sqrt(bin0*bin1)')
+    dfbin['count'] = g.count()
+    dfbin[key + '_mean'] = g.mean()
+    dfbin[key + '_std'] = g.std()
+    dfbin[key +'_mean_err'] = dfbin[key + '_std']/ np.sqrt(dfbin['count'])
+
+    for p in [1,5,25,50,75,95,99]:
+        k = key+'_{:02d}'.format(p)
+        dfbin[k] = g.quantile(q=p * 0.01)
+    return dfbin
 
 def prad_fe_fit():
     cksbin = cksmet.io.load_table('cksbin-fe')

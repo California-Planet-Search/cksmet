@@ -138,8 +138,8 @@ class Workflow(object):
         d['lamo-on-cks'] = cksmet.plotting.calibrate.validation_lamo
         d['prad-smet-cuts'] = cksmet.plotting.smet.cuts
         d['stellar-samples'] = cksmet.plotting.samples.samples
-        d['prad-fe'] = cksmet.plotting.smet.prad_fe
-        d['prad-fe-percentiles'] = cksmet.plotting.smet.prad_fe_percentiles
+        #d['prad-fe'] = cksmet.plotting.smet.prad_fe
+        d['percentiles'] = cksmet.plotting.smet.fig_percentiles
         d['per-prad-slices-equal-stars'] = lambda : cksmet.plotting.smet.period_prad_slices(mode='four-equal-stars')
         d['checkerboard'] =  cksmet.plotting.occur.fig_checkerboard
         d['occur-per'] =  cksmet.plotting.occur.fig_per

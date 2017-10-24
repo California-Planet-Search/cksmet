@@ -269,22 +269,6 @@ def load_occur(key, cache=1):
             pickle.dump(fit,f)
 
 
-def table_bin(df, bins, key):
-    g = df.groupby(pd.cut(df.iso_prad,bins=bins))
-    g = g[key]
-    dfbin = pd.DataFrame(index=g.first().index)
-    dfbin['bin0'] = bins[0:-1]
-    dfbin['bin1'] = bins[1:]
-    dfbin['binc'] = dfbin.eval('sqrt(bin0*bin1)')
-    dfbin['count'] = g.count()
-    dfbin[key + '_mean'] = g.mean()
-    dfbin[key + '_std'] = g.std()
-    dfbin[key +'_mean_err'] = dfbin[key + '_std']/ np.sqrt(dfbin['count'])
-
-    for p in [1,5,25,50,75,95,99]:
-        k = key+'_{:02d}'.format(p)
-        dfbin[k] = g.quantile(q=p * 0.01)
-    return dfbin
 
 def latex_table(table):
     tab = load_table(table)

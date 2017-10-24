@@ -3,6 +3,16 @@ import seaborn as sns
 from cksmet.plotting.config import *
 import cksmet.io
 
+def label():
+    xlabel('Orbital Period (days)')
+    ylabel('Planet Size (Earth-radii)')
+    xt = [1,3,10,30,100,300]
+    yt = [0.5,1,2,4,8,16]
+    xticks(xt,xt)
+    yticks(yt,yt)
+    fig = gcf()
+    rename()
+
 def mesfac(st):
     fig,axL = subplots(ncols=2,figsize=(8,4))
     sca(axL[0])
@@ -73,9 +83,6 @@ def fig_prob_detect_transit():
     setp(t,size='x-small')
 
     label()
-
-
-
     sca(axL[1])
     loglog()
     kw['levels'] = [0.000,0.001,0.010,0.020,0.050,0.100]
