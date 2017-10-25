@@ -3,8 +3,8 @@ Module for statistics
 """
 from scipy.special import gammaln as gamln
 from scipy import special
-
 import numpy as np
+
 class Binomial(object):
     def __init__(self, n, k):
         """
@@ -36,6 +36,7 @@ class Binomial(object):
         rate, pdf = self.pdf()
         cdf = pdf.cumsum()
         fp = rate
+        np.random.seed(0)
         x = np.random.random_sample(nsamp)
         return np.interp(x, cdf, rate)
 

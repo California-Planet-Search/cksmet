@@ -58,6 +58,7 @@ def cut_statistics(df, sample, cuttypes):
         npassallprev = npassall
 
     return lines
+
 def occurrence(stub=False):
     key = 'occur-per=0.25-prad=twoperoctave'
     occ = cksmet.io.load_object(key,cache=1)

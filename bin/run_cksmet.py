@@ -74,6 +74,7 @@ def calc_occur(args):
         'occur-per=0.05-prad=physical-smet=sup',
         'occur-per=0.05-prad=physical-smet=all',
         'occur-per=hotwarm-prad=physical-smet=0.05',
+        'occur-per=0.05-prad=physical-smet=0.05',
 
         # Used in plotting
         'occur-per=0.25-prad=twoperoctave', # checkerboard plot/HJ rate
