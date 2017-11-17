@@ -47,12 +47,13 @@ def cut_statistics(df, sample, cuttypes):
         npass = (b.astype(int)==False).sum()
         count += b.astype(int)
         npassall = np.sum(count==0)
+        npassall_star = len(cut.df[count==0].id_kic.drop_duplicates())
 
         # pass all cuts
         f_pass_current = float(npassall) / float(npassallprev) 
         f_pass_all = float(npassall) / nall # pass all cuts
-        line = r"{: <35} & {: <5} & {: <5} & {:.3f} \\".format(
-            cut.texstr, npass, npassall, f_pass_current
+        line = r"{: <35} & {: <5} & {: <5} & {:.3f} & {: <5} \\".format(
+            cut.texstr, npass, npassall, f_pass_current, npassall_star
         )
         lines.append(line)
         npassallprev = npassall

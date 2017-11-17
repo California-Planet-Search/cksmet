@@ -781,22 +781,25 @@ def fig_smet():
         if plot_fit:
             sampler.plot_all()
 
-    sca(axL[0])
-    i = 0
-    for size in 'se sn ss jup'.split():
-        s =  "\n"*i + namedict[size] 
-        text(0.65, 0.97, s, color=ptcolor[size],va='top',ha='left', transform=axL[0].transAxes,size='small')
-        i+=1
-
+    labels = ["$P$ = 1$-$10 days","$P$ = 10$-$100 days"]
     for i in range(2):
+        ax = axL[i] 
+        sca(ax)
         letters = ["a","b"]
         fig_label(letters[i])
+        add_anchored(labels[i],1,frameon=False)
+
+        j = 0
+        for size in 'se sn ss jup'.split():
+            s =  "\n"*j + namedict[size] 
+            text(0.65, 0.15, s, color=ptcolor[size],va='top',ha='left', transform=ax.transAxes,size='small')
+            j+=1
 
     for ax in axL:
         sca(ax)
         yticks_planets_per_100_stars()
         ylabel('Planets per 100 Stars')
-        ylim(1e-4,1)
+        ylim(1e-4,3)
         xlim(-0.4,0.4)
         xlabel('[Fe/H]')
 

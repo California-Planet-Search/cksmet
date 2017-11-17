@@ -206,7 +206,6 @@ class Workflow(object):
                     continue
                     
                 # Remove last \\
-                lines[-1] = lines[-1].replace('\\\\','')
                 fn = self.key2fn(key, 'table')
                 with open(fn,'w') as f:
                     f.writelines("\n".join(lines))

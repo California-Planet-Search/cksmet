@@ -45,35 +45,10 @@ def calibrate_lamo():
     - logg_sm
     - fe_sm
     """
-    # Load up specmatch results specmatch sample
-    CAL_SAMPLE = 'cks'
-    LAMO_SAMPLE = 'lamost-dr2'
-    cal = cksmet.io.load_table(CAL_SAMPLE,cache=1)
-    cal = cksmet.io.sub_prefix(cal,'cks_')
-    cal = cal['id_kic steff slogg smet'.split()]
-
-    lamo = cksmet.io.load_table(LAMO_SAMPLE,cache=1)
-    lamo = cksmet.io.sub_prefix(lamo,'lamo_')
-    lamo = lamo['id_kic steff slogg smet'.split()]
-    namemap = {'steff':'teff','slogg':'logg','smet':'fe'}
-
-    cal = cal.rename(columns=namemap)
-    lamo = lamo.rename(columns=namemap)
-
+    df = cksmet.io.load_table('lamost-cks-calibration-sample')
+    import pdb;pdb.set_trace()
     calfn  = 'cal_lamo-to-cks.fits'
-
-    print ""
-    print "calibrating {} to {}".format(LAMO_SAMPLE,CAL_SAMPLE)
     print "saving cal file to {}".format(calfn)
-    print ""
-
-    # Merge two catalogs and compute the differences
-    df = cksspec.utils.merge_spec_tables(
-        lamo, cal, on=['id_kic'], suffixes=['_new','_lib']
-    )
-    
-    df = df.query('abs(fe_diff) < 0.3')
-    print "{} stars in comparison after removing outliers".format(len(df))
 
     #df['fe_lib'] = df['fe_new']
 
@@ -126,6 +101,8 @@ def calibrate_lamo():
     
     # lamocal = lamo['id_kic teff logg fe'.split()]
     print "Calibrate all of the LAMOST parameters"
+
+    import pdb;pdb.set_trace()
     lamo = cksmet.io.load_table(LAMO_SAMPLE,cache=1)
     lamo = cksmet.io.sub_prefix(lamo,'lamo_')
     lamo = lamo['id_kic kic_kepmag steff slogg smet'.split()]

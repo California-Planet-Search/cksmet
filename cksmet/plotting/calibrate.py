@@ -13,9 +13,7 @@ def load_comparison(table):
     else:
         df = cksmet.io.load_table(table)
 
-    namemap = {
-        'lamo_steff':'teff','lamo_slogg':'logg','lamo_smet':'fe'
-    }
+    namemap = {'lamo_steff':'teff','lamo_slogg':'logg','lamo_smet':'fe'}
     df = df.rename(columns=namemap)
 
     # Make fivepane plots
@@ -25,13 +23,10 @@ def load_comparison(table):
     }
     lib = lib.rename(columns=namemap)
     df = pd.merge(df, lib, on=['id_kic'])
-
-
     df['teff_diff'] = df['teff'] - df['teff_lib'] 
     df['logg_diff'] = df['logg'] - df['logg_lib'] 
     df['fe_diff'] = df['fe'] - df['fe_lib'] 
     return df
-
 
 def validation_lamo():
     sns.set(
@@ -41,7 +36,6 @@ def validation_lamo():
             'xtick.direction': u'in',
             'ytick.direction': u'in',}
     )
-
     df = load_comparison('lamost-dr2')
     dfcal = load_comparison('lamost-dr2-cal')
 
@@ -79,6 +73,8 @@ def validation_lamo():
 
     fig.set_tight_layout(True)
     fig.set_tight_layout(False)
-    fig.subplots_adjust(hspace=0.001,left=0.12,top=0.96,right=0.98,wspace=0.4,bottom=0.14)
+    fig.subplots_adjust(
+        hspace=0.001,left=0.12,top=0.96,right=0.98,wspace=0.4,bottom=0.14
+    )
 
 
