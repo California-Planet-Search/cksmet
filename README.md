@@ -9,7 +9,6 @@ run_cksmet.py create-plot lamo-on-cks
 
 run_cksmet.py create-samples
 run_cksmet.py create-plot prad-smet-cut
-run_cksmet.py stellar-samples 
 
 ## Calc Completeness
 
@@ -35,9 +34,13 @@ run_cksmet.py create-val all
 
 run_cksmet.py create-table all
 
-## 
+## Cookbook to do a fresh build of paper
+
+rm data/*.pkl
+rm load_table_cache.hdf
 
 run_cksmet.py calibrate-lamo
+run_cksmet.py create-samples
 run_cksmet.py calc-comp
 run_cksmet.py calc-occur
 run_cksmet.py fit-occur

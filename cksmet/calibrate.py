@@ -120,7 +120,8 @@ def calibrate_lamo():
     df = cksmet.io.load_table(caltable)
 
     verbose = True
-    _calibrate_lamo(df, calfn, verbose)
+    fitkw=dict(suffixes=['_new','_lib'], mode="L2")
+    _calibrate_lamo(df, calfn, verbose,fitkw)
     if verbose:
         print "saving cal file to {}".format(calfn)
 
