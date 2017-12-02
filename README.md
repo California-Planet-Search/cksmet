@@ -34,8 +34,11 @@ run_cksmet.py create-val all
 
 run_cksmet.py create-table all
 
-## Cookbook to do a fresh build of paper
+## Cookbook to do a fresh build of paper 
 
+Takes about 5min
+
+```bash
 rm data/*.pkl
 rm load_table_cache.hdf
 
@@ -48,11 +51,10 @@ run_cksmet.py create-table all
 run_cksmet.py create-plot all
 run_cksmet.py create-val all
 run_cksmet.py update-paper
-
-
-``` Occurrence rate of HJs
-occ = cksmet.io.load_object('occur-nsmet=1',cache=1)
-cut = occ.df.query('1 < perc < 10 and 8 < pradc < 24')
-print cut['rate'].sum()
-cksmet.stats.sum_cells(cut.ntrial,cut.nplnt)
 ```
+
+## Cookbook to perturb metallicities
+
+We tested the extent to which zero-point offsets between the LAMOST
+and CKS metallicities could affect the final results. Go into
+cksmet/io.py and add or subtract a given metallicity from the lamost-dr2-cal
