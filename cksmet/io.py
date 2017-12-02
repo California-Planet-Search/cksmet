@@ -18,6 +18,7 @@ import cksspec.utils
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
 COMPLETENESS_FILE = os.path.join(DATADIR, 'comp.pkl')
+from cksmet.calibrate import LAMO_SAMPLE, CAL_SAMPLE
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     """Load tables used in cksmet
@@ -108,40 +109,36 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
         df = cksmet.cuts.add_cuts(df, cksmet.cuts.plnt_cuttypes, 'cks')
 
-    elif table=='lamost-cks-calibration-sample':
+    elif table=='lamost-cks-calibration-sample-noclip':
         # Load up specmatch results specmatch sample
-        CAL_SAMPLE = 'cks'
-        LAMO_SAMPLE = 'lamost-dr2'
         cal = cksmet.io.load_table(CAL_SAMPLE,cache=1)
         cal = cksmet.io.sub_prefix(cal,'cks_')
         cal = cal['id_kic steff slogg smet svsini kic_kepmag'.split()]
 
         lamo = cksmet.io.load_table(LAMO_SAMPLE,cache=1)
         lamo = cksmet.io.sub_prefix(lamo,'lamo_')
-        lamo = lamo['id_kic steff slogg smet'.split()]
+        lamo = lamo['id_kic steff slogg smet snrg'.split()]
         namemap = {'steff':'teff','slogg':'logg','smet':'fe'}
 
         cal = cal.rename(columns=namemap)
         lamo = lamo.rename(columns=namemap)
-
-
 
         # Merge two catalogs and compute the differences
         df = cksspec.utils.merge_spec_tables(
             lamo, cal, on=['id_kic'], suffixes=['_new','_lib']
         )
         print ""
-        print "calibrating {} to {}".format(LAMO_SAMPLE,CAL_SAMPLE)
         print "_new =  {}".format(LAMO_SAMPLE)
         print "_lib =  {}".format(CAL_SAMPLE)
         print ""
         
         df = df.groupby('id_kic',as_index=False).first()
-        #df = df.query('abs(fe_diff) < 0.3')
-        #df = df.query('abs(fe_diff) < 0.3')
+
+    elif table=='lamost-cks-calibration-sample':
+        df = load_table('lamost-cks-calibration-sample-noclip')
+        df = df.query('abs(fe_diff) < 0.2')
         print "{} stars in comparison after removing outliers".format(len(df))
         
-
     elif table=='lamost-dr2-cal-cuts':
         # Apply similar set of cuts to the lamost sample.
         df = load_table('lamost-dr2-cal')

@@ -23,6 +23,9 @@ def main():
     psr2 = subpsr.add_parser('calibrate-lamo', parents=[psr_parent])
     psr2.set_defaults(func=calibrate_lamo)
 
+    psr2 = subpsr.add_parser('calibrate-lamo-bootstrap', parents=[psr_parent])
+    psr2.set_defaults(func=calibrate_lamo_bootstrap)
+
     psr2 = subpsr.add_parser('create-samples', parents=[psr_parent])
     psr2.set_defaults(func=create_samples)
 
@@ -54,9 +57,11 @@ def main():
     args = psr.parse_args()
     args.func(args)
 
-
 def calibrate_lamo(args):
     cksmet.calibrate.calibrate_lamo()
+
+def calibrate_lamo_bootstrap(args):
+    calfe = cksmet.calibrate.calibrate_lamo_bootstrap()
 
 def create_samples(args):
     df = cksmet.io.load_table('cks-cuts',cache=2)
@@ -136,7 +141,8 @@ def update_paper(args):
 class Workflow(object):
     def __init__(self):
         d = OrderedDict()
-        d['lamo-on-cks'] = cksmet.plotting.calibrate.validation_lamo
+        d['lamo-on-cks'] = cksmet.plotting.calibrate.lamo_on_cks
+        d['lamo-diff'] = cksmet.plotting.calibrate.fig_lamo_diff
         d['prad-smet-cuts'] = cksmet.plotting.smet.cuts
         d['stellar-samples'] = cksmet.plotting.samples.samples
         #d['prad-fe'] = cksmet.plotting.smet.prad_fe

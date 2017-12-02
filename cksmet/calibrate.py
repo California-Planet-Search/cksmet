@@ -4,13 +4,14 @@ touchstone stars to assess the integrity of results.
 import os 
 
 import pandas as pd
-import smsyn.calibrate
-import cksspec.plotting.catalogs
-import cksspec.io
+import cksmet._calibrate
 import cksmet.io
-import cksspec.utils
+import cksmet.utils
 from cksmet.io import DATADIR
 from matplotlib.pylab import *
+
+CAL_SAMPLE = 'cks' # stellar sample used for calibration
+LAMO_SAMPLE = 'lamost-dr2'  # lamost table used for calibration
 
 def add_booleans(df0):
     df = df0.copy()
@@ -30,28 +31,7 @@ def add_booleans(df0):
     df['bcal'] = (df.bagree==1.0) & df.bteff & df.bvsini 
     return df
 
-def calibrate_lamo():
-    """
-    Calibrates LAMOST parameters to CKS scale 
-
-    - name
-    - obs
-    - teff_sm_uncal
-    - logg_sm_uncal
-    - fe_sm_uncal
-    - vsini_sm
-    - delta
-    - teff_sm,
-    - logg_sm
-    - fe_sm
-    """
-    df = cksmet.io.load_table('lamost-cks-calibration-sample')
-    import pdb;pdb.set_trace()
-    calfn  = 'cal_lamo-to-cks.fits'
-    print "saving cal file to {}".format(calfn)
-
-    #df['fe_lib'] = df['fe_new']
-
+def _calibrate_lamo(df, calfn, verbose, fitkw):
     # Perform calibration on teff
     node_points = [
         dict(teff=7000),
@@ -59,8 +39,8 @@ def calibrate_lamo():
     ]
 
     node_points = pd.DataFrame(node_points)
-    calteff = smsyn.calibrate.Calibrator('teff')
-    calteff.fit(df, node_points)
+    calteff = cksmet._calibrate.Calibrator('teff')
+    calteff.fit(df, node_points, **fitkw)
 
     # Calibrate logg
     node_points = [
@@ -69,8 +49,8 @@ def calibrate_lamo():
     ]
 
     node_points = pd.DataFrame(node_points)
-    callogg = smsyn.calibrate.Calibrator('logg')
-    callogg.fit(df, node_points)
+    callogg = cksmet._calibrate.Calibrator('logg')
+    callogg.fit(df, node_points, **fitkw)
 
     # Perform calibration on [Fe/H]
     node_points = [
@@ -78,14 +58,15 @@ def calibrate_lamo():
         dict(fe=1.0),
     ]
     node_points = pd.DataFrame(node_points)
-    calfe = smsyn.calibrate.Calibrator('fe')
-    calfe.fit(df, node_points)
+    calfe = cksmet._calibrate.Calibrator('fe')
+    calfe.fit(df, node_points, **fitkw)
 
     # Save away validation parameters
     calteff.to_fits(calfn)
     callogg.to_fits(calfn)
     calfe.to_fits(calfn)
 
+    '''
     # Print calibration planes
     x = dict(teff=5500)
     dx = dict(teff=100)
@@ -98,25 +79,64 @@ def calibrate_lamo():
     x = dict(fe=0.0)
     dx = dict(fe=0.1)
     calfe.print_hyperplane(x,dx,fmt='.4f')
-    
-    # lamocal = lamo['id_kic teff logg fe'.split()]
-    print "Calibrate all of the LAMOST parameters"
+    '''
 
-    import pdb;pdb.set_trace()
+def calibrate_lamo_bootstrap():
+    """
+    Calibrates LAMOST parameters to CKS scale 
+    """
+    caltable = 'lamost-cks-calibration-sample'
+    calfn_pre  = 'bootstrap/L2_cal_lamo-to-cks'
+    df = cksmet.io.load_table(caltable)
+    verbose = False
+
+    n = 1000
+    np.random.seed(0)
+    fitkw=dict(suffixes=['_new','_lib'], mode="L2")
+    for isamp in range(n):
+        if isamp%10==0:
+            print isamp
+        df_samp = df.sample(frac=1,replace=True) 
+        calfn = "{}_{:04d}.fits".format(calfn_pre,isamp)
+        _calibrate_lamo(df_samp, calfn, verbose,fitkw)
+    caltable = 'lamost-cks-calibration-sample-noclip'
+    calfn_pre  = 'bootstrap/L1_noclip_cal_lamo-to-cks'
+    df = cksmet.io.load_table(caltable)
+    fitkw=dict(suffixes=['_new','_lib'], mode="L1")
+    for isamp in range(n):
+        if isamp%10==0:
+            print isamp
+        df_samp = df.sample(frac=1,replace=True) 
+        calfn = "{}_{:04d}.fits".format(calfn_pre,isamp)
+        _calibrate_lamo(df_samp, calfn, verbose, fitkw)
+
+def calibrate_lamo():
+    """
+    Calibrates LAMOST parameters to CKS scale 
+    """
+    caltable = 'lamost-cks-calibration-sample'
+    calfn  = 'cal_lamo-to-cks.fits'
+
+    df = cksmet.io.load_table(caltable)
+
+    verbose = True
+    _calibrate_lamo(df, calfn, verbose)
+    if verbose:
+        print "saving cal file to {}".format(calfn)
+
+    print "Calibrate all of the LAMOST parameters"
     lamo = cksmet.io.load_table(LAMO_SAMPLE,cache=1)
     lamo = cksmet.io.sub_prefix(lamo,'lamo_')
     lamo = lamo['id_kic kic_kepmag steff slogg smet'.split()]
     namemap = {'steff':'teff','slogg':'logg','smet':'fe'}
     lamo = lamo.rename(columns=namemap)
-    lamocal = smsyn.calibrate.calibrate(lamo, calfn, mode='uncal')
-    lamocal = cksspec.utils.replace_columns(lamocal,'teff','lamo_steff')
-    lamocal = cksspec.utils.replace_columns(lamocal,'logg','lamo_slogg')
-    lamocal = cksspec.utils.replace_columns(lamocal,'fe','lamo_smet')
+    lamocal = cksmet._calibrate.calibrate(lamo, calfn, mode='uncal')
+    lamocal = cksmet.utils.replace_columns(lamocal,'teff','lamo_steff')
+    lamocal = cksmet.utils.replace_columns(lamocal,'logg','lamo_slogg')
+    lamocal = cksmet.utils.replace_columns(lamocal,'fe','lamo_smet')
     lamocal = lamocal.drop(['delta'],axis=1)
 
     lamofn = os.path.join(DATADIR,'lamost-dr2-cal.hdf')
     ncal = len(lamocal)
     print "saving {} calibrated LAMO parameters into {}".format(ncal,lamofn)
     lamocal.to_hdf(lamofn,'lamost-dr2-cal')
-
-

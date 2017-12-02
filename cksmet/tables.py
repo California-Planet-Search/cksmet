@@ -6,7 +6,7 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 import cksmet.io
-
+import glob
 def cuts_planets():
     """
     Apply cuts in sucession, count number of stars that pass
@@ -178,6 +178,16 @@ def val_samp(return_dict=False):
 
     d['n-stars-field-pass-eff'] = cksmet.cuts.n_stars_field_pass_eff
 
+
+    df = cksmet.io.load_table('lamost-cks-calibration-sample-noclip',cache=1)
+    d['n-cks-lamo-tot'] = len(df)
+
+    df = cksmet.io.load_table('lamost-cks-calibration-sample',cache=1)
+    d['n-cks-lamo-cal'] = len(df)
+
+    d['n-cks-lamo-out'] = d['n-cks-lamo-tot'] - d['n-cks-lamo-cal']
+
+
     # LAMOST Quantiles
     lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
@@ -186,7 +196,6 @@ def val_samp(return_dict=False):
     for q, smet in lamoq.iteritems():
         d['lamo-smet-{:.0f}'.format(q*100)] = "{:+.3f}".format(lamoq.ix[q])
 
-    
     boxes = cksmet.kstest._boxes()
     boxes = pd.DataFrame(boxes)
     cks = cksmet.io.load_table('cks-cuts',cache=1)
@@ -216,14 +225,51 @@ def val_samp(return_dict=False):
     d['rate-hot-jup'] = r"{%.2f}^{+%.2f}_{%.2f}" % (1e2*stats['rate'], 1e2*stats['rate_err1'], 1e2*stats['rate_err2'])
     d['rate-hot-jup-simple'] = r"{%.2f}" % (1e2*cut.rate.sum())
 
-    if return_dict:
-        return d
 
+    x = dict(fe=0.0)
+    dx = dict(fe=0.1)
+    def hyperplane_coeff_samples(prefix, param, x,dx,):
+        fL = glob.glob(prefix)
+        samples = []
+        for f in fL[:100]:
+            cal = cksmet._calibrate.read_fits(f,param)
+            out = cal.hyperplane_coeff(x,dx)
+            out['param'] = param
+            samples.append(out)
+        return samples
+
+    L1 = hyperplane_coeff_samples('bootstrap/L1*','fe',x,dx)
+    L2 = hyperplane_coeff_samples('bootstrap/L2*','fe',x,dx)
+
+    L1 = pd.DataFrame(L1)
+    L2 = pd.DataFrame(L2)
+
+    d['L2-c0'] = "{:.3f}".format(L2['c0'].mean())
+    d['L2-c1'] = "{:.3f}".format(L2['cfe'].mean())
+    d['L2-c0-err'] = "{:.3f}".format(L2['c0'].std())
+    d['L2-c1-err'] = "{:.3f}".format(L2['cfe'].std())
+
+    xeval = -0.5
+    samp = L2.c0 + L2.cfe * (xeval - x['fe'])/dx['fe']
+    d['L2-val-m0.5'] = "{:+.3f} \pm {:.3f}".format(samp.mean(),samp.std())
+
+    xeval = +0.5
+    samp = L2.c0 + L2.cfe * (xeval - x['fe'])/dx['fe']
+    d['L2-val-p0.5'] = "{:+.3f} \pm {:.3f}".format(samp.mean(),samp.std())
+
+    d['L1-c0'] = "{:.3f}".format(L1['c0'].mean())
+    d['L1-c1'] = "{:.3f}".format(L1['cfe'].mean())
+    d['L1-c0-err'] = "{:.3f}".format(L1['c0'].std())
+    d['L1-c1-err'] = "{:.3f}".format(L1['cfe'].std())
+
+    
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)
         lines.append(line)
 
+    if return_dict:
+        return d
     return lines
 
 

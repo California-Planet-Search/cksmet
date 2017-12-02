@@ -6,6 +6,7 @@ from cksspec.plotting.compare import comparison
 
 import pandas as pd
 from matplotlib.pylab import *
+from cksmet.plotting.config import *
 
 def load_comparison(table):
     if table=='lamost-dr2':
@@ -28,7 +29,7 @@ def load_comparison(table):
     df['fe_diff'] = df['fe'] - df['fe_lib'] 
     return df
 
-def validation_lamo():
+def lamo_on_cks():
     sns.set(
         style='ticks',
         rc={'ytick.major.size':3.0,
@@ -36,29 +37,16 @@ def validation_lamo():
             'xtick.direction': u'in',
             'ytick.direction': u'in',}
     )
-    df = load_comparison('lamost-dr2')
-    dfcal = load_comparison('lamost-dr2-cal')
+    sns.set_context('paper',font_scale=1.1)
+    df = cksmet.io.load_table('lamost-cks-calibration-sample')
 
-    # Raw
-    cksspec.plotting.catalogs.fivepane(
-        df,suffixes=['_lib',''], color='fe',
-        kw_twopane=dict(labels=['CKS','LAMO'])
-    )
-    plot_prefix = 'lamost-dr2-on-cks'
-    gcf().get_axes()[0].set_title(plot_prefix+' (raw)')
-    pdffn = 'fig_{}-raw.pdf'.format(plot_prefix)
-    gcf().savefig(pdffn)
-    print pdffn
+    dfcal = df.copy()
+    calfn  = 'cal_lamo-to-cks.fits'
+    namemap = {'teff_new':'teff','logg_new':'logg','fe_new':'fe'}
+    dfcal = dfcal.rename(columns=namemap)
 
-    # Cal
-    cksspec.plotting.catalogs.fivepane(
-        dfcal,suffixes=['_lib',''], color='fe',
-        kw_twopane=dict(labels=['CKS','LAMO'])
-    )
-    gcf().get_axes()[0].set_title(plot_prefix+' (cal)')
-    pdffn = 'fig_{}-cal.pdf'.format(plot_prefix)
-    gcf().savefig(pdffn)
-    print pdffn
+    dfcal = cksmet._calibrate.calibrate(dfcal, calfn, mode='uncal')
+    dfcal = dfcal.drop(['delta'],axis=1)
 
     fig = figure(figsize=(7,3.5))
     shape = (10,2)
@@ -68,13 +56,54 @@ def validation_lamo():
     ax4 = subplot2grid(shape, (8,1), rowspan=2, sharex=ax3)
 
     kw = dict(label1='CKS',label2='LAMOST',fig0=fig)
-    comparison('smet',df.fe_lib,df.fe, axL0=[ax1,ax2],**kw)
+    comparison('smet',df.fe_lib,df.fe_new, axL0=[ax1,ax2],**kw)
     comparison('smet',dfcal.fe_lib,dfcal.fe, axL0=[ax3,ax4],**kw)
-
     fig.set_tight_layout(True)
     fig.set_tight_layout(False)
     fig.subplots_adjust(
         hspace=0.001,left=0.12,top=0.96,right=0.98,wspace=0.4,bottom=0.14
     )
 
+def fig_lamo_diff():
+    import seaborn as sns
+    sns.set(
+        style='ticks',
+        rc={'ytick.major.size':3.0,
+            'xtick.major.size':3.0,
+            'xtick.direction': u'in',
+            'ytick.direction': u'in',}
+    )
+    sns.set_context('paper',font_scale=1.1)
+    sns.set_style('ticks')
+    df = cksmet.io.load_table('lamost-cks-calibration-sample-noclip')
+    fig,axL = subplots(ncols=3,figsize=(8,3),sharey=True)
+    axL= axL.flatten()
 
+    kw = dict(lw=0,marker='.')
+    sca(axL[0])
+    fig_label("a")
+    plot(df.fe_lib,df.fe_diff,**kw)
+    xlabel('[Fe/H] (CKS)')
+    grid()
+
+    sca(axL[1])
+    fig_label("b")
+    plot(df.kic_kepmag,df.fe_diff,**kw)
+    xlabel('$Kp$')
+    grid()
+
+    sca(axL[2])
+    fig_label("c")
+    plot(df.snrg,df.fe_diff,**kw)
+    semilogx()
+    xlim(400,8)
+    xlabel('LAMOST (SNR)')
+    xticks([300,100,30,10],[300,100,30,10])
+
+    setp(axL,ylim=(-0.5,0.5))
+    setp(axL[0],ylabel='$\Delta$ [Fe/H] (LAMOST-CKS)')
+    tight_layout()
+    grid()
+
+
+    
