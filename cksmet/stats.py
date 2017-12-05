@@ -36,7 +36,6 @@ class Binomial(object):
         rate, pdf = self.pdf()
         cdf = pdf.cumsum()
         fp = rate
-        np.random.seed(0)
         x = np.random.random_sample(nsamp)
         return np.interp(x, cdf, rate)
 
@@ -76,9 +75,11 @@ def sum_cells(ntrial, nplnt):
     nsample = int(1e4)
 
     samplesL = []
+    np.random.seed(0)
     for i in range(len(nplnt)):
         binom = Binomial(ntrial[i], nplnt[i])
-        samplesL.append(binom.sample(nsample))
+        samples = binom.sample(nsample)
+        samplesL.append(samples)
 
     samplesL = np.vstack(samplesL)
     isuplim = (nplnt==0) # True if cell yields upper limit
