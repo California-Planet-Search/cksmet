@@ -87,7 +87,7 @@ def calculate_statistics(smet_plnt, smet_star):
     d['kstest_pval'] = pval
 
     smet_star_mean = -0.005
-    smet_sys = 0.02
+    smet_sys = 0.01 # the amount of systematic error
     thresh = 0.01
 
     stat, pval = scipy.stats.ttest_1samp(smet_plnt, smet_star_mean)
