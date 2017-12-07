@@ -88,6 +88,7 @@ def fig_lamo_diff():
 
     sca(axL[1])
     fig_label("b")
+
     plot(df.kic_kepmag,df.fe_diff,**kw)
     xlabel('$Kp$')
     grid()

@@ -346,7 +346,7 @@ def period_prad_slices(mode='tall'):
         setp(axL[:,0], ylabel='Planet Size (Earth-radii)')
 
     # Load up LAMOST metallicities
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
 
     plnt = cksmet.io.load_table('cks-cuts')

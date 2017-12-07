@@ -66,7 +66,7 @@ def calibrate_lamo_bootstrap(args):
 def create_samples(args):
     df = cksmet.io.load_table('cks-cuts',cache=2)
     df = cksmet.io.load_table('field-cuts',cache=2)
-    df = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=2)
+    df = cksmet.io.load_table('lamost-cal-cuts',cache=2)
 
 def calc_comp(args):
     cksmet.io.load_object('comp',cache=2)

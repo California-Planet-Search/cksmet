@@ -51,9 +51,9 @@ class CutFaint(CutBase):
     texstr = '$Kp$ < 14.2 mag'
     def cut(self):
         if self.sample=='cks':
-            kepmag = self.df['kic_kepmag']
+            kepmag = self.df['m17_kepmag']
         elif self.sample=='lamo':
-            kepmag = self.df['kic_kepmag']
+            kepmag = self.df['m17_kepmag']
         elif self.sample=='field':
             kepmag = self.df['kepmag']
 

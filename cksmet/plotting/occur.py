@@ -685,7 +685,7 @@ def fig_smet_warm():
     xk = 'smetc'
     dist = 'warm'
 
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
     smet_field = lamo.lamo_smet
 
@@ -709,7 +709,7 @@ def fig_smet_hot():
     Display the integrated planet occurrence from P = 1-10 days 
     """
 
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
     smet_field = lamo.lamo_smet
 
@@ -754,7 +754,7 @@ def fig_smet():
     df = occ.df
     df = df[df.smetc.between(-0.4,0.4)]
 
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
     smet_field = lamo.lamo_smet
 
