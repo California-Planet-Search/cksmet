@@ -55,7 +55,7 @@ def kstest_region():
 
     cks = cksmet.io.load_table('cks-cuts',cache=1)
     cks = cks[~cks.isany]
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=2)
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=2)
     lamo = lamo[~lamo.isany]
     #lamo = lamo.query('-1 < lamo_smet < 0.5')
 

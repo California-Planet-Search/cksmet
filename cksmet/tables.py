@@ -29,7 +29,7 @@ def cuts_lamost():
     """
     Apply cuts in sucession, count number of stars that pass
     """
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
     cuttypes = cksmet.cuts.lamo_cuttypes
     lines = cut_statistics(lamo, 'lamo', cuttypes)
     return lines
@@ -97,7 +97,7 @@ def smet_stats():
     """
     Apply cuts in sucession, count number of stars that pass
     """
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
 
     field = cksmet.io.load_table('field-cuts',cache=1)
@@ -189,7 +189,7 @@ def val_samp(return_dict=False):
 
 
     # LAMOST Quantiles
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
     quantiles = [0.25, 0.5, 0.75]
     lamoq = lamo.lamo_smet.quantile(quantiles)

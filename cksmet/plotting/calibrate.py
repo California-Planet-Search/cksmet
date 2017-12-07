@@ -9,7 +9,7 @@ from matplotlib.pylab import *
 from cksmet.plotting.config import *
 
 def load_comparison(table):
-    if table=='lamost-dr2':
+    if table=='lamost':
         df = cksmet.io.load_table(table,cache=1)
     else:
         df = cksmet.io.load_table(table)

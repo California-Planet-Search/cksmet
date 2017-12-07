@@ -8,6 +8,7 @@ from astropy.io import fits
 from astropy import constants as c 
 from astropy import units as u
 
+import cksmet.crossmatch
 import cksmet.cuts
 import cksmet.grid
 import cksmet.analysis
@@ -77,19 +78,50 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         dfbin['fe_mean_err'] = dfbin['fe_std']/np.sqrt(dfbin['nstars'])
         df = dfbin
 
-    elif table=='lamost-dr2':
-        df = cksspec.io.load_table('lamost-dr2')
+    elif table=='lamost':
+        df = load_table('lamost-dr3')
 
-    elif table=='lamost-dr2-cal':
-        fn = os.path.join(DATADIR,'lamost-dr2-cal.hdf')
-        df = pd.read_hdf(fn, 'lamost-dr2-cal')
+
+    elif table=='lamost-dr3':
+        dr3 = pd.read_hdf('data/lamost/dr3.hdf','dr3')
+        stellar = load_table('mathur17',cache=1)
+
+        dr3 = dr3.drop(['ra','dec'],axis=1)
+        dr3 = dr3.rename(columns={'ra_obs':'ra','dec_obs':'dec'})
+        s17 = cksmet.io.load_table('mathur17')
+        s17 = s17['id_kic m17_ra m17_dec'.split()]
+        s17 = s17.rename(columns={'m17_ra':'ra','m17_dec':'dec'})
+        df =  cksmet.crossmatch.match_coords(dr3,s17,dist=1.2)
+        df = df['id_kic teff teff_err logg logg_err feh feh_err snru snrg snrr snri snrz rv rv_err tsource tcomment tfrom'.split()]
+        df['steff'] = df['teff']
+        df['slogg'] = df['logg']
+        df['smet'] = df['feh']
+        df['steff_err1'] = df['teff_err']
+        df['steff_err2'] = -1.0 * df['teff_err']
+        df['slogg_err1'] = df['logg_err']
+        df['slogg_err2'] = -1.0 * df['logg_err']
+        df['slogg_err1'] = df['logg_err']
+        df['slogg_err2'] = -1.0 * df['logg_err']
+        df['smet_err1'] = df['feh_err']
+        df['smet_err2'] = -1.0 * df['feh_err']
+        df = add_prefix(df,'lamo_')
+        df = pd.merge(df,stellar)
+
+        # Select row with highest SNR
+        df = df.sort_values(by=['id_kic','lamo_snrg'])
+        df = df.groupby('id_kic',as_index=False).last()
+
+
+    elif table=='lamost-cal':
+        fn = os.path.join(DATADIR,'lamost-cal.hdf')
+        df = pd.read_hdf(fn, 'lamost-cal')
 
     elif table=='cks':
         df = pd.read_csv('/Users/petigura/Research/CKS-Physical/data/cks_physical_merged.csv')
 
-    elif table=='lamost-dr2+cks':
+    elif table=='lamost+cks':
         cks = load_table('cks')
-        lamost = load_table('lamost-dr2',cache=1)
+        lamost = load_table('lamost',cache=1)
         df = pd.merge(lamost,cks,on='id_kic')
         return df
 
@@ -139,9 +171,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = df.query('abs(fe_diff) < 0.2')
         print "{} stars in comparison after removing outliers".format(len(df))
         
-    elif table=='lamost-dr2-cal-cuts':
+    elif table=='lamost-cal-cuts':
         # Apply similar set of cuts to the lamost sample.
-        df = load_table('lamost-dr2-cal')
+        df = load_table('lamost-cal')
 
         m17 = load_table('mathur17')
         df = pd.merge(df,m17)
@@ -150,8 +182,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = cksmet.cuts.add_cuts(df, cuttypes, 'lamo')
 
 
-    elif table=='lamost-dr2-cal-cuts+cdpp':
-        lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    elif table=='lamost-cal-cuts+cdpp':
+        lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
         huber14 = cksmet.io.load_table('huber14+cdpp',cache=1)
         huber14 = huber14['id_kic kepmag cdpp3 cdpp6 cdpp12'.split()]
         lamo = pd.merge(lamo,huber14,on='id_kic')

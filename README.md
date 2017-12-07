@@ -57,4 +57,4 @@ run_cksmet.py update-paper
 
 We tested the extent to which zero-point offsets between the LAMOST
 and CKS metallicities could affect the final results. Go into
-cksmet/io.py and add or subtract a given metallicity from the lamost-dr2-cal
+cksmet/io.py and add or subtract a given metallicity from the lamost-cal

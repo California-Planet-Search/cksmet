@@ -86,7 +86,7 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins, verbose=1):
     }
     plnt = cks.rename(columns=namemap)
 
-    lamo = cksmet.io.load_table('lamost-dr2-cal-cuts',cache=1)
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
     lamo = lamo[~lamo.isany]
     smet_field = lamo.lamo_smet
     occur = cksmet.occur.Occurrence(plnt, comp, nstars, smet_field=smet_field)

@@ -11,7 +11,7 @@ from cksmet.io import DATADIR
 from matplotlib.pylab import *
 
 CAL_SAMPLE = 'cks' # stellar sample used for calibration
-LAMO_SAMPLE = 'lamost-dr2'  # lamost table used for calibration
+LAMO_SAMPLE = 'lamost'  # lamost table used for calibration
 
 def add_booleans(df0):
     df = df0.copy()
@@ -128,7 +128,7 @@ def calibrate_lamo():
     print "Calibrate all of the LAMOST parameters"
     lamo = cksmet.io.load_table(LAMO_SAMPLE,cache=1)
     lamo = cksmet.io.sub_prefix(lamo,'lamo_')
-    lamo = lamo['id_kic kic_kepmag steff slogg smet'.split()]
+    lamo = lamo['id_kic m17_kepmag steff slogg smet'.split()]
     namemap = {'steff':'teff','slogg':'logg','smet':'fe'}
     lamo = lamo.rename(columns=namemap)
     lamocal = cksmet._calibrate.calibrate(lamo, calfn, mode='uncal')
@@ -137,7 +137,7 @@ def calibrate_lamo():
     lamocal = cksmet.utils.replace_columns(lamocal,'fe','lamo_smet')
     lamocal = lamocal.drop(['delta'],axis=1)
 
-    lamofn = os.path.join(DATADIR,'lamost-dr2-cal.hdf')
+    lamofn = os.path.join(DATADIR,'lamost-cal.hdf')
     ncal = len(lamocal)
     print "saving {} calibrated LAMO parameters into {}".format(ncal,lamofn)
-    lamocal.to_hdf(lamofn,'lamost-dr2-cal')
+    lamocal.to_hdf(lamofn,'lamost-cal')
