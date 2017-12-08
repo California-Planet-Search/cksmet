@@ -266,8 +266,12 @@ def load_fit(key):
             else:
                 assert False, "error"
         if (key.count('warm')==1):
-            fit.p0['alpha'].vary = True
-            fit.p0['alpha'].value = 0
+            if (key.count('se')==1):
+                fit.p0['alpha'].vary = True
+                fit.p0['alpha'].value = -0.6
+            else:
+                fit.p0['alpha'].vary = True
+                fit.p0['alpha'].value = 0
 
 
         fit.fit()
