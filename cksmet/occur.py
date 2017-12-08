@@ -1,3 +1,7 @@
+"""
+Defines occurrence object
+"""
+
 import cksmet.stats
 from statsmodels.distributions.empirical_distribution import ECDF
 

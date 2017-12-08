@@ -79,7 +79,7 @@ def calc_contour():
             print per_bins
             print prad_bins
 
-            occ = cksmet.analysis.compute_binned_occurrence(
+            occ = cksmet.analysis.compute_occur_bins(
                 per_bins, prad_bins, smet_bins, verbose=verbose
             )
             occ.df['count'] = count
@@ -281,7 +281,7 @@ def fig_checkerboard(plot_planetpoints=True):
     eps = 1e-3
     smet_bins = [-1,0.5]
 
-    occ = cksmet.analysis.compute_binned_occurrence(
+    occ = cksmet.analysis.compute_occur_bins(
         per_bins, prad_bins, smet_bins
     )
 
@@ -633,12 +633,12 @@ class Sampler(object):
         self.fit_best = self.model(params)
 
 class SamplerSmet(Sampler):
-    x = np.linspace(-0.4,0.4,10) 
+    x = np.arange(-0.5,0.6,0.2) 
     
 class SamplerPerSmet(Sampler):
     smet1 = -0.4
     smet2 = 0.4
-    x = linspace(smet1,smet2,10)
+    x = np.arange(-0.5,0.6,0.2) 
     dsmet = 0.2
 
     def __init__(self, key, fmtkey, perlims, smet_field):
@@ -664,7 +664,9 @@ class SamplerPerSmet(Sampler):
         return fit_sample
 
 class SamplerPer(Sampler):
-    x = np.logspace(log10(1),log10(350), 100)
+    dx = 0.25 / 10
+    x = arange(np.log10(0.1) + 0.5*dx,np.log10(1000),dx)
+    x = 10**x
 
 def sum_cells_per(df0):
     df2 = []
