@@ -178,19 +178,21 @@ def val_samp(return_dict=False):
 
     d['n-stars-field-pass-eff'] = cksmet.cuts.n_stars_field_pass_eff
 
-
     df = cksmet.io.load_table('lamost-cks-calibration-sample-noclip',cache=1)
     d['n-cks-lamo-tot'] = len(df)
 
+    # LAMOST calibration
     df = cksmet.io.load_table('lamost-cks-calibration-sample',cache=1)
     d['n-cks-lamo-cal'] = len(df)
-
     d['n-cks-lamo-out'] = d['n-cks-lamo-tot'] - d['n-cks-lamo-cal']
 
 
-    # LAMOST Quantiles
+    # LAMOST 
     lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
+    d['n-stars-lamo'] = "{}".format( len(lamo) )
     lamo = lamo[~lamo.isany]
+    d['n-stars-lamo-pass'] = "{}".format( len(lamo))
+
     quantiles = [0.25, 0.5, 0.75]
     lamoq = lamo.lamo_smet.quantile(quantiles)
     for q, smet in lamoq.iteritems():
@@ -224,7 +226,6 @@ def val_samp(return_dict=False):
     stats = cksmet.stats.sum_cells(cut.ntrial,cut.nplnt)
     d['rate-hot-jup'] = r"{%.2f}^{+%.2f}_{%.2f}" % (1e2*stats['rate'], 1e2*stats['rate_err1'], 1e2*stats['rate_err2'])
     d['rate-hot-jup-simple'] = r"{%.2f}" % (1e2*cut.rate.sum())
-
 
     x = dict(fe=0.0)
     dx = dict(fe=0.1)
@@ -261,6 +262,9 @@ def val_samp(return_dict=False):
     d['L1-c1'] = "{:.3f}".format(L1['cfe'].mean())
     d['L1-c0-err'] = "{:.3f}".format(L1['c0'].std())
     d['L1-c1-err'] = "{:.3f}".format(L1['cfe'].std())
+
+
+
 
     
     lines = []

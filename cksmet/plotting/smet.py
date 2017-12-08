@@ -328,7 +328,13 @@ def period_prad_slices(mode='tall'):
         )
 
     if mode=='four-equal-stars':
-        smet_bins = [-10, -0.115, 0.013, 0.121, 10]
+
+        lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
+        lamo = lamo[~lamo.isany]
+        quantiles = [0.25, 0.5, 0.75]
+        lamo = lamo.lamo_smet
+        lamoq = lamo.quantile(quantiles)
+        smet_bins = [-10] + list(lamoq) + [10]
         labels = [
             '[Fe/H] < ${:.3f}$'.format(smet_bins[1]),
             '[Fe/H] = (${:+.3f}$,${:+.3f}$)'.format(*smet_bins[1:3]),

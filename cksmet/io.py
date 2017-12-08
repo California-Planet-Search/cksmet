@@ -110,7 +110,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         # Select row with highest SNR
         df = df.sort_values(by=['id_kic','lamo_snrg'])
         df = df.groupby('id_kic',as_index=False).last()
-
+        
+        # Only work with stars brighter than 14 mag 
+        df = df.query('m17_kepmag < 14.2')
 
     elif table=='lamost-cal':
         fn = os.path.join(DATADIR,'lamost-cal.hdf')

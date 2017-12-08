@@ -90,7 +90,7 @@ def calibrate_lamo_bootstrap():
     df = cksmet.io.load_table(caltable)
     verbose = False
 
-    n = 1000
+    n = 200
     np.random.seed(0)
     fitkw=dict(suffixes=['_new','_lib'], mode="L2")
     for isamp in range(n):
