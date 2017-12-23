@@ -16,6 +16,10 @@ import cksmet.pdplus
 import cksspec.io
 import cksmet.pdplus
 import cksspec.utils
+
+import cksmet.population
+
+
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 FLUX_EARTH = (c.L_sun / (4.0 * np.pi * c.au**2)).cgs.value
 COMPLETENESS_FILE = os.path.join(DATADIR, 'comp.pkl')
@@ -268,6 +272,13 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.read_csv(tablefn,sep='\s+',skiprows=2,names=names)
         df['id_starname'] = ['K'+str(x).rjust(5, '0') for x in df.id_koi] # LMW convert id_koi to id_starname for merge with cks
         df = add_prefix(df,'furlan_')
+
+    elif table=='occur-surface':
+        df = cksmet.surface.compute_occur_surface() 
+
+    elif table=='per-prad-population':
+        p, nplanets = cksmet.population.load_pinky() 
+        df = cksmet.population.load_population(p, nplanets) 
 
     else:
         assert False, "table {} not valid table name".format(table)

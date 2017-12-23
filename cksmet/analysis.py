@@ -1,3 +1,6 @@
+"""
+High-level analysis routines for CKS-Metallicity 
+"""
 import re
 
 import numpy as np
@@ -25,7 +28,9 @@ per_bins_dict = {
     'four-per-decade': 10**np.arange(-0.5,3.001,0.25)    
 }    
 
-# Neceassary to overshoot edge oc completeness zone so that spline interpolation works so eventhough we only go up to 32 Re, we compute completeness out to 64
+# Neceassary to overshoot edge oc completeness zone so that spline
+# interpolation works so eventhough we only go up to 32 Re, we compute
+# completeness out to 64
 prad_bins_dict = {
     'xfine': np.round(np.logspace(np.log10(0.25),np.log10(64),49 ),2),
     'fine': np.round(np.logspace(np.log10(0.25),np.log10(64),25 ),2),
@@ -71,7 +76,11 @@ def load_completeness():
     comp.create_splines()
     return comp
 
-def compute_binned_occurrence(per_bins, prad_bins, smet_bins, verbose=1):
+def compute_occur_bins(per_bins, prad_bins, smet_bins, verbose=1):
+    """
+    Compute occurrence over speficied grid of period, radius, and metallicity
+    """
+
     nstars = cksmet.cuts.n_stars_field_pass_eff 
 
     print "Initializing occurrence object"
@@ -125,6 +134,8 @@ def compute_binned_occurrence(per_bins, prad_bins, smet_bins, verbose=1):
     occur.df = out
     return occur
 
+
+
 def set_index(occ, mode):
     df = occ.df
     if mode=='dist-size':
@@ -173,7 +184,7 @@ def load_occur(key):
         per_bins = [1, 10, 100]
         prad_bins = prad_bins_dict['physical']
         smet_bins = _smet_bins(smet)
-        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+        occ = compute_occur_bins(per_bins, prad_bins, smet_bins)
         occ = set_index(occ, 'dist-size')
 
     # Occurence log uniform per, physical prad, uniform smet, 
@@ -182,7 +193,7 @@ def load_occur(key):
         per_bins = _per_bins(per)
         prad_bins = prad_bins_dict['physical']
         smet_bins = _smet_bins(smet)
-        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+        occ = compute_occur_bins(per_bins, prad_bins, smet_bins)
         occ = set_index(occ,'size')
 
     # Occurence log uniform per, physical prad, uniform smet, 
@@ -191,7 +202,7 @@ def load_occur(key):
         per_bins = _per_bins(per)
         prad_bins = prad_bins_dict['two-per-octave']
         smet_bins = [-1,0.5]
-        occ = compute_binned_occurrence(per_bins, prad_bins, smet_bins)
+        occ = compute_occur_bins(per_bins, prad_bins, smet_bins)
     else:
         assert False, "cannot parse {}".format(key)
     return occ
@@ -286,3 +297,5 @@ def load_fit(key):
     fit.print_parameters()
     fit.occur = cut
     return fit
+
+

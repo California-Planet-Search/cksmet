@@ -6,3 +6,5 @@ data/
 *.pkl
 *.tex
 paper/
+bootstrap/
+cal/

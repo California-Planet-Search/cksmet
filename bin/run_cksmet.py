@@ -5,6 +5,7 @@ import os
 from matplotlib.pylab import *
 import cPickle as pickle
 from collections import OrderedDict
+
 import cksmet.plotting.smet
 import cksmet.plotting.occur
 import cksmet.plotting.comp
@@ -13,7 +14,8 @@ import cksmet.calibrate
 import cksmet.plotting.calibrate
 import cksmet.analysis
 import cksmet.io
-import cksmet.kstest
+import cksmet.ttest
+import cksmet.values
 
 def main():
     psr = ArgumentParser()
@@ -35,10 +37,15 @@ def main():
     psr2 = subpsr.add_parser('calc-occur', parents=[psr_parent])
     psr2.set_defaults(func=calc_occur)
 
+    psr2 = subpsr.add_parser('calc-occur-surface', parents=[psr_parent])
+    psr2.set_defaults(func=calc_occur_surface)
+
+    psr2 = subpsr.add_parser('calc-population', parents=[psr_parent])
+    psr2.set_defaults(func=calc_population)
+
     psr2 = subpsr.add_parser('fit-occur', parents=[psr_parent])
     psr2.set_defaults(func=fit_occur)
 
-    # Products for paper
     psr2 = subpsr.add_parser('create-val', parents=[psr_parent], )
     psr2.add_argument('name',type=str)
     psr2.set_defaults(func=create_val)
@@ -72,7 +79,6 @@ def calc_comp(args):
     cksmet.io.load_object('comp',cache=2)
 
 def calc_occur(args):
-
     keys = [
         # Used in fitting
         'occur-per=0.05-prad=physical-smet=sub', # 
@@ -93,6 +99,13 @@ def calc_occur(args):
 
     for key in keys:
         df = cksmet.io.load_object(key,cache=2)
+
+def calc_occur_surface(args):
+    df = cksmet.io.load_table('occur-surface',cache=2)
+
+def calc_population(args):
+    df = cksmet.io.load_table('per-prad-population',cache=2)
+
 
 def fit_occur(args):
     fits = [
@@ -163,14 +176,16 @@ class Workflow(object):
         d['cuts-planets'] = cksmet.tables.cuts_planets
         d['cuts-field'] = cksmet.tables.cuts_field
         d['smet-stats'] = cksmet.tables.smet_stats
-        d['kstest'] = cksmet.kstest.kstest_region
+        d['ttest'] = cksmet.ttest.ttest_region
         d['occurrence'] = cksmet.tables.occurrence
         d['occurrence-stub'] = lambda : cksmet.tables.occurrence(stub=True)
+        d['population'] = cksmet.tables.population
+        d['population-stub'] = lambda : cksmet.tables.population(stub=True)
         self.table_dict = d
 
         d = OrderedDict()
-        d['samp'] = cksmet.tables.val_samp
-        d['fit'] = cksmet.tables.val_fit
+        d['samp'] = cksmet.values.val_samp
+        d['fit'] = cksmet.values.val_fit
         self.val_dict = d
 
         d = OrderedDict()
