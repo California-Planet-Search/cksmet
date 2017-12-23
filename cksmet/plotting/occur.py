@@ -8,12 +8,12 @@ from matplotlib.patches import Rectangle
 import matplotlib.patheffects as path_effects
 from matplotlib.transforms import blended_transform_factory as btf
 
+from cksmet.plotting.config import *
 import cksmet.io
 import cksmet.analysis
 import cksmet.occur
-from cksmet.plotting.config import *
-
 import cksmet.surface
+import cksmet.tables
 
 sns.set_style('ticks')
 sns.set_color_codes()
@@ -370,7 +370,6 @@ def fig_per_smet():
 
     fig.set_tight_layout(True)
 
-import cksmet.tables
 
 def fig_summary():
     sns_set_style('ticks')
@@ -581,7 +580,7 @@ class Sampler(object):
         self.fit_best = self.model(params)
 
 class SamplerSmet(Sampler):
-    x = np.arange(-0.5,0.6,0.2) 
+    x = np.arange(-0.5,0.6,0.02) 
     
 class SamplerPerSmet(Sampler):
     smet1 = -0.4
