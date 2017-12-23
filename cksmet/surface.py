@@ -3,6 +3,7 @@ module to compute occurrence surface
 """
 import numpy as np
 import cksmet.analysis 
+import pandas as pd
 
 bin_per = 0.25 # period bin width in dex
 bin_prad = 0.1 # prad bin width in dex
@@ -31,14 +32,14 @@ def compute_occur_surface():
             else:
                 verbose=0
 
-            shift_logper = surface_bin_per / ssamp_per * i
-            shift_logprad = surface_bin_prad / ssamp_prad * j
+            shift_logper = bin_per / ssamp_per * i
+            shift_logprad = bin_prad / ssamp_prad * j
             logper1 = np.log10(per1) + shift_logper
             logper2 = np.log10(per2) + shift_logper
             logprad1 = np.log10(prad1) + shift_logprad
             logprad2 = np.log10(prad2) + shift_logprad
-            per_bins = 10**(np.arange(logper1,logper2+eps,surface_bin_per))
-            prad_bins = 10**(np.arange(logprad1,logprad2+eps,surface_bin_prad))
+            per_bins = 10**(np.arange(logper1,logper2+eps,bin_per))
+            prad_bins = 10**(np.arange(logprad1,logprad2+eps,bin_prad))
             print per_bins
             print prad_bins
 

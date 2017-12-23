@@ -13,7 +13,7 @@ import cksmet.io
 import cksmet.analysis
 import cksmet.occur
 import cksmet.surface
-import cksmet.tables
+import cksmet.values
 
 sns.set_style('ticks')
 sns.set_color_codes()
@@ -379,7 +379,7 @@ def fig_summary():
     sizes = ['se','sn','ss','jup']
     pradbins = [1.0, 1.7, 4.0, 8.0, 24.0]
     loglog()
-    d = cksmet.tables.val_samp(return_dict=True)
+    d = cksmet.values.val_samp(return_dict=True)
     for i in range(len(perbins)-1):
         for j in range(len(pradbins)-1):
             per = pers[i]

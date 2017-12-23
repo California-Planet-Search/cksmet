@@ -20,7 +20,7 @@ run_cksmet.py calc-occur
 
 ## Occurrence surface
 
-python bin/run_cksmet.py create-occur-surface
+run_cksmet.py calc-occur-surface
 
 ## Fit various regions of the per-prad-smet plane with
 
@@ -55,8 +55,9 @@ run_cksmet.py calibrate-lamo
 run_cksmet.py create-samples
 run_cksmet.py calc-comp
 run_cksmet.py calc-occur
-run_cksmet.py create-occur-surface
+run_cksmet.py calc-occur-surface
 run_cksmet.py fit-occur
+run_cksmet.py calc-population
 run_cksmet.py create-table all
 run_cksmet.py create-plot all
 run_cksmet.py create-val all

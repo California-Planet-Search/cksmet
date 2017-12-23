@@ -274,7 +274,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = add_prefix(df,'furlan_')
 
     elif table=='occur-surface':
-        df = cksmet.analysis.compute_occur_surface() 
+        df = cksmet.surface.compute_occur_surface() 
 
     elif table=='per-prad-population':
         p, nplanets = cksmet.population.load_pinky() 
