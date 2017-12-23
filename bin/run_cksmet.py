@@ -35,6 +35,9 @@ def main():
     psr2 = subpsr.add_parser('calc-occur', parents=[psr_parent])
     psr2.set_defaults(func=calc_occur)
 
+    psr2 = subpsr.add_parser('calc-occur-surface', parents=[psr_parent])
+    psr2.set_defaults(func=calc_occur_surface)
+
     psr2 = subpsr.add_parser('fit-occur', parents=[psr_parent])
     psr2.set_defaults(func=fit_occur)
 
@@ -72,7 +75,6 @@ def calc_comp(args):
     cksmet.io.load_object('comp',cache=2)
 
 def calc_occur(args):
-
     keys = [
         # Used in fitting
         'occur-per=0.05-prad=physical-smet=sub', # 
@@ -93,6 +95,10 @@ def calc_occur(args):
 
     for key in keys:
         df = cksmet.io.load_object(key,cache=2)
+
+def calc_occur_surface(args):
+    df = cksmet.io.load_table('occur-surface',cache=2)
+
 
 def fit_occur(args):
     fits = [
@@ -166,6 +172,8 @@ class Workflow(object):
         d['kstest'] = cksmet.kstest.kstest_region
         d['occurrence'] = cksmet.tables.occurrence
         d['occurrence-stub'] = lambda : cksmet.tables.occurrence(stub=True)
+        d['population'] = cksmet.tables.population
+        d['population-stub'] = lambda : cksmet.tables.population(stub=True)
         self.table_dict = d
 
         d = OrderedDict()

@@ -7,6 +7,8 @@ import pandas as pd
 import numpy as np
 import cksmet.io
 import glob
+import cksmet.kstest
+
 def cuts_planets():
     """
     Apply cuts in sucession, count number of stars that pass
@@ -127,6 +129,18 @@ def smet_stats():
     for q, smet in lamoq.iteritems():
         lines.append(r"{:.0f}\% & {:.3f} & {:.3f} & {:.3f} \\".format(q*100, cksq.ix[q], fieldq.ix[q], lamoq.ix[q]))
     
+    return lines
+
+def population(stub=False):
+    lines = []
+    df = cksmet.io.load_table('per-prad-samples',cache=1)
+    if stub:
+        df = df.iloc[:10]
+    df['i'] = range(len(df))
+    for i, row in df.iterrows():
+        line = r"{i:.0f} & {per:.3f} & {prad:.3f}  \\".format(**row)
+        lines.append(line)
+
     return lines
 
 def val_fit():
@@ -263,10 +277,12 @@ def val_samp(return_dict=False):
     d['L1-c0-err'] = "{:.3f}".format(L1['c0'].std())
     d['L1-c1-err'] = "{:.3f}".format(L1['cfe'].std())
 
+    p, nplanets = cksmet.population.load_pinky()
+    nstars = cksmet.population.nstars
+    d['pop-nstars'] = nstars
+    d['pop-nplanets'] = nplanets
+    d['pop-intrate'] = "{:.1f}".format(100.0 * nplanets / nstars)
 
-
-
-    
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)
@@ -276,5 +292,3 @@ def val_samp(return_dict=False):
         return d
     return lines
 
-
-import cksmet.kstest

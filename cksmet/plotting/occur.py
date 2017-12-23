@@ -13,6 +13,8 @@ import cksmet.analysis
 import cksmet.occur
 from cksmet.plotting.config import *
 
+import cksmet.surface
+
 sns.set_style('ticks')
 sns.set_color_codes()
 
@@ -48,47 +50,6 @@ sizedict = {
     'jup':'$R_P$ = 8.0$-$24.0 $R_E$'
 }
 
-bin_per = 0.25 # period bin width in dex
-bin_prad = 0.1 # prad bin width in dex
-
-def calc_contour():
-    per1 = 0.5
-    per2 = 1000
-    prad1 = 0.25
-    prad2 = 32
-    ssamp_per = 10 # supersample factor
-    ssamp_prad = 10 # supersample factor
-    eps = 1e-3
-    smet_bins = [-1,0.5]
-    df = []
-    count = 0 
-    for i in range(ssamp_per):
-        for j in range(ssamp_prad):
-            if count < 2:
-                verbose=1
-            else:
-                verbose=0
-            shift_logper = bin_per / ssamp_per * i
-            shift_logprad = bin_prad / ssamp_prad * j
-            logper1 = np.log10(per1) + shift_logper
-            logper2 = np.log10(per2) + shift_logper
-            logprad1 = np.log10(prad1) + shift_logprad
-            logprad2 = np.log10(prad2) + shift_logprad
-            per_bins = 10**(np.arange(logper1,logper2+eps,bin_per))
-            prad_bins = 10**(np.arange(logprad1,logprad2+eps,bin_prad))
-            print per_bins
-            print prad_bins
-
-            occ = cksmet.analysis.compute_occur_bins(
-                per_bins, prad_bins, smet_bins, verbose=verbose
-            )
-            occ.df['count'] = count
-            df.append(occ.df)
-            count+=1
-            
-    df = pd.concat(df)
-    df.to_hdf('test.hdf','test')
-    return df
 
 def fig_contour_all(scale='log'):
     sns_set_style('ticks')
@@ -128,31 +89,19 @@ def contour(scale='linear', plot_planetpoints=True, plot_interval=False,
     ax = gca()
     tax = gca().transAxes
 
-    binsize_prad = 0.1 # dex
-    binsize_per = 0.5 # dex
-
-    test = pd.read_hdf('test.hdf','test')
-    temp = test.query('per2 < 350 and prob_det_mean > 0.25').dropna(subset=['rate']).sort_values(by='rate')
-    testmin = temp.iloc[0]
-    testmax = temp.iloc[-1]
-    print "max {perc} {pradc} {rate}".format(**testmax)
-    print "min {perc} {pradc} {rate}".format(**testmin)
-    test = test.groupby(['per1','prad1']).first()
-
-    ds = test.to_xarray()
-    cut = ds
-
-    rate = cut.rate
+    df = cksmet.io.load_table('occur-surface',cache=1)
+    # convert into an x-array for plotting
+    ds = df.groupby(['per1','prad1']).first().to_xarray()
+    rate = ds.rate
     rate = rate.fillna(4e-6)
-    rate = nd.gaussian_filter(rate,(2*2.5,1*2.5))
+
+    # Smooth out the contours a bit
+    rate = nd.gaussian_filter(rate,(4,2))
 
     eps = 1e-10
     X, Y = np.log10(ds.perc), np.log10(ds.pradc)
     cmap = None
     cmap = 'YlGn' #,None #'hot_r'
-    #cmap = sns.light_palette((260, 75, 60), input="husl",as_cmap=True)
-    #cmap = sns.cubehelix_palette(rot=-.4,as_cmap=True)
-    #cmap = "Reds"
     levels = None
     cbarlabel=''
     if scale=='linear':
@@ -173,7 +122,6 @@ def contour(scale='linear', plot_planetpoints=True, plot_interval=False,
         cbarticklabels = [0.01, 0.03, 0.1, 0.3, 1, 3,10]
         cbarticks = np.log10(np.array(cbarticklabels) * 1e-2)
         kw = dict(extend='min',cmap=cmap,levels=levels,vmin=-3.99)
-
 
     cbarlabel = r"""Planets per 100 Stars per $P-R_P$ interval"""
 
@@ -214,8 +162,8 @@ def contour(scale='linear', plot_planetpoints=True, plot_interval=False,
         xyaxes = (0.6,0.9)
         xy = ax.transLimits.inverted().transform(xyaxes)
         #xy = ax.transAxes.transform((0.9,0.9))
-        w = bin_per 
-        h = bin_prad
+        w = cksmet.surface.bin_per 
+        h = cksmet.surface.bin_prad
         rect = Rectangle(xy, w, h,lw=1,ec='r',fc='none',zorder=4)
         ax.add_patch(rect)
         s = """\
