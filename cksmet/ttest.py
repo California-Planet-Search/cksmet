@@ -48,9 +48,9 @@ def plot_region():
         ax.add_patch(rect)
         text(corner[0]*1.05, corner[1]*1.05, row['name'], weight='bold')
     
-def kstest_region():
+def ttest_region():
     """
-    Loop over the different regions and compute the KS test.
+    Loop over the different regions and compute the T test.
     """
 
     cks = cksmet.io.load_table('cks-cuts',cache=1)
@@ -63,15 +63,12 @@ def kstest_region():
     boxes = boxes.copy()
     #boxes = boxes.sort_values(by=['per1','prad1'])
     boxes2 = []
-    
-
     lines = []
     for i,row in boxes.iterrows():
         cut = cks[
             cks.koi_period.between(row.per1,row.per2) &
             cks.iso_prad.between(row.prad1,row.prad2)
         ]
-
         d = calculate_statistics(cut.cks_smet,lamo.lamo_smet)
         d = dict(d, **row)
         lines.append( to_string(d))
@@ -83,8 +80,6 @@ def calculate_statistics(smet_plnt, smet_star):
     d['n'] = len(smet_plnt)
     d['mean'] = mean(smet_plnt)
     d['sem'] = std(smet_plnt) / np.sqrt(d['n'])
-    stat, pval = scipy.stats.ks_2samp(smet_plnt, smet_star)
-    d['kstest_pval'] = pval
 
     smet_star_mean = -0.005
     smet_sys = 0.01 # the amount of systematic error
