@@ -109,8 +109,9 @@ class Fit(object):
         
         print "loglike_fit = {:.4f}, max(loglike_mcmc) = {:.4f}".format(self.loglike_fit, np.max(res_emcee.lnprob) )
         if self.loglike_fit < np.max(res_emcee.lnprob):
-            print "warning maxlike from lmfit is smaller than maxlike from emcee"
-
+            print ""
+            print "WARNING maxlike from lmfit is smaller than maxlike from emcee"
+            print ""
     def corner(self):
         corner.corner(self.flatchain)
 

@@ -116,8 +116,9 @@ def fit_occur(args):
         'fit_per-sup-sn',
         'fit_per-all-se',
         'fit_per-all-sn',
-        'fit_per-all-ss',
-        'fit_per-all-jup',
+#        'fit_per-all-ss',
+#        'fit_per-all-jup',
+
 
         'fit_persmet-hot-se',
         'fit_persmet-hot-sn',
@@ -129,6 +130,7 @@ def fit_occur(args):
         'fit_persmet-warm-ss',
         'fit_persmet-warm-jup',
 
+        
     ]
 
     for fit in fits:

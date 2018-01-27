@@ -242,6 +242,11 @@ def load_fit(key):
 
         fit = cksmet.fit.PowerLawCutoff(cut.perc, dx, cut.nplnt, cut.ntrial) 
         #fit.p0['binwper'].value = binwper
+
+        if (key.count('sn')==1):
+            fit.p0['logkp'].vary = True
+            fit.p0['logkp'].value = -0.1
+
         fit.fit()
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
 
