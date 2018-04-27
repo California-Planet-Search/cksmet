@@ -142,9 +142,11 @@ def contour(scale='linear', plot_planetpoints=True, plot_interval=False,
         cbar.set_label(cbarlabel,size='small')
 
     if plot_planetpoints:
-        cks = cksmet.io.load_table('cks-cuts',cache=1)
-        cks = cks[~cks.isany]
-        x,y = log10(cks.koi_period),log10(cks.iso_prad)
+        #cks = cksmet.io.load_table('cks-cuts',cache=1)
+        #cks = cks[~cks.isany]
+        import cksgaia.io
+        cks = cksgaia.io.load_table("cksgaia-planets-filtered")
+        x,y = log10(cks.koi_period),log10(cks.giso_prad)
         plot(x,y,'.',mfc='none',mec='red',mew=0.3,ms=5)
 
     # Completeness

@@ -50,13 +50,20 @@ size = pd.DataFrame(
 )
 smet = pd.DataFrame(index=[-1,0],data=['sub','sup'],columns=['smet'])
 
+
+import cksgaia.io
+
 def load_completeness():
     method = 'fulton-gamma' # treatment for planet detectability
     impact = 0.9 # maximum impact parameter considered.
 
+
     field = cksmet.io.load_table('field-cuts',cache=1)
     field = field.query('~isany')
-    field = field.rename(columns={'m17_srad':'srad','m17_smass':'smass'})
+    gaia = cksgaia.io.load_table('m17+gaia2',cache=1)['id_kic gaia2_srad'.split()]
+    field = pd.merge(field, gaia, on='id_kic')
+    import pdb;pdb.set_trace()
+    field = field.rename(columns={'gaia2_srad':'srad','m17_smass':'smass'})
 
     # Some photometric properties have null values, drop
     n1 = len(field)
@@ -85,12 +92,14 @@ def compute_occur_bins(per_bins, prad_bins, smet_bins, verbose=1):
 
     print "Initializing occurrence object"
     comp = cksmet.io.load_object('comp',cache=1)
-    cks = cksmet.io.load_table('cks-cuts',cache=1)
-    cks = cks[~cks.isany]
-    cks = cks.dropna(subset=['iso_prad'])
+    #cks = cksmet.io.load_table('cks-cuts',cache=1)
+    #cks = cks[~cks.isany]
+
+    cks = cksgaia.io.load_table("cksgaia-planets-filtered")
+    #cks = cks.dropna(subset=['iso_prad'])
     namemap = {
-        'iso_srad':'srad','koi_period':'per','iso_prad':'prad',
-        'iso_sma':'smax','cks_smet':'smet','koi_impact':'impact',
+        'iso_srad':'srad','koi_period':'per','giso_prad':'prad',
+        'giso_sma':'smax','cks_smet':'smet','koi_impact':'impact',
         'koi_max_mult_ev':'mes'
     }
     plnt = cks.rename(columns=namemap)
@@ -99,6 +108,7 @@ def compute_occur_bins(per_bins, prad_bins, smet_bins, verbose=1):
     lamo = lamo[~lamo.isany]
     smet_field = lamo.lamo_smet
     occur = cksmet.occur.Occurrence(plnt, comp, nstars, smet_field=smet_field)
+
 
     print "Define occurrence grid"
 
@@ -289,9 +299,7 @@ def load_fit(key):
                 fit.p0['alpha'].vary = True
                 fit.p0['alpha'].value = 0
 
-
         fit.fit()
-        
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
 
     else:
