@@ -62,7 +62,6 @@ def load_completeness():
     field = field.query('~isany')
     gaia = cksgaia.io.load_table('m17+gaia2',cache=1)['id_kic gaia2_srad'.split()]
     field = pd.merge(field, gaia, on='id_kic')
-    import pdb;pdb.set_trace()
     field = field.rename(columns={'gaia2_srad':'srad','m17_smass':'smass'})
 
     # Some photometric properties have null values, drop
